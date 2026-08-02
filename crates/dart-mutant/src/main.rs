@@ -72,8 +72,19 @@ fn run() -> Result<u8> {
 }
 
 /// Mutation testing result summary — used for JSON output and console display.
+///
+/// `schema_version` is declared first so serde serializes it as the opening
+/// key of the JSON object (serde emits struct fields in declaration order).
+/// It is the frozen agent-facing JSON contract — see
+/// `docs/cli-json-contract.md`. Bump only on a breaking change (major
+/// version, e.g. `2.0`); additive changes keep `1.0`.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct PipelineSummary {
+    /// Agent-facing JSON schema version. Serialized as `schemaVersion`.
+    /// Frozen at `"1.0"` — additive-only changes keep this value; breaking
+    /// changes require a major bump (e.g. `2.0`).
+    #[serde(rename = "schemaVersion")]
+    pub schema_version: String,
     pub mutation_score: f64,
     pub mutation_coverage: f64,
     pub total: usize,
@@ -101,6 +112,7 @@ pub struct FileSummary {
 impl Default for PipelineSummary {
     fn default() -> Self {
         Self {
+            schema_version: "1.0".to_string(),
             mutation_score: 0.0,
             mutation_coverage: 0.0,
             total: 0,
@@ -454,6 +466,7 @@ fn build_summary(results: &[MutantResult], config: &Config) -> PipelineSummary {
         .collect();
 
     PipelineSummary {
+        schema_version: "1.0".to_string(),
         mutation_score: ms,
         mutation_coverage: mc,
         total,
