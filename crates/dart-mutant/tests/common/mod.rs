@@ -90,6 +90,30 @@ pub fn run_mutant_raw(path_arg: &str, extra_args: &[&str]) -> (std::process::Out
     (output, stdout)
 }
 
+/// Run dart-mutant against a named fixture with extra env vars, inheriting
+/// the parent environment (so the tool's child `dart test` processes see
+/// them too).
+pub fn run_mutant_with_env(
+    fixture: &str,
+    extra_args: &[&str],
+    env: &[(&str, &str)],
+) -> (std::process::Output, String) {
+    let path = fixture_dir(fixture);
+    let mut cmd = Command::new(bin());
+    cmd.arg("--path").arg(&path);
+    for a in extra_args {
+        cmd.arg(a);
+    }
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
+    let output = cmd
+        .output()
+        .unwrap_or_else(|e| panic!("failed to spawn dart-mutant binary: {e}"));
+    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
+    (output, stdout)
+}
+
 /// Parse the full stdout as a single JSON document, returning a
 /// `serde_json::Value`. Use `expect` with a context message so failures
 /// name the fixture and show a stdout prefix.

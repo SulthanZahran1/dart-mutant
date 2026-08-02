@@ -3,33 +3,69 @@
 //!
 //! ## Contract
 //!
-//! The medium fixture deliberately contains a slow test file whose tests
-//! sleep ~2-4s in total and cover **no** library code (the parent contract:
-//! a slow test covering nothing). If the tool has no per-test coverage
-//! routing and re-runs *all* tests for every mutant, each mutant pays that
-//! 2-4s sleep, blowing the wall-clock budget.
+//! The medium fixture contains `test/routing_probe_test.dart`: a test that
+//! imports NO library code (covers zero lib lines) and, when the
+//! `DM_ROUTING_MARKER` env var is set, appends a marker line to that file
+//! path every time it executes.
 //!
-//! Therefore: a full medium run must complete in under 10 seconds wall-clock.
-//! This is a timing-based assertion — report honestly, do not fake it.
+//! Under per-test coverage routing the probe runs exactly **once** (during
+//! baseline coverage collection) and is never re-run for any mutant, because
+//! no mutant is covered by it. If the tool lacks routing and re-runs the full
+//! suite per mutant, the probe runs once per mutant, appending one marker
+//! line each time.
+//!
+//! So the assertion is **behavioral and machine-independent**: after a full
+//! medium run, the marker file must contain exactly one line. A timing
+//! assertion would be flaky (per-mutant JIT spawns dominate wall-clock on
+//! loaded machines), so we count executions instead.
 
 mod common;
 
-use std::time::Instant;
+use std::io::Read;
+use std::path::PathBuf;
 
-use common::{parse_and_check_schema, run_mutant};
+use common::{parse_and_check_schema, run_mutant_with_env};
 
-/// A full medium run must finish in under 10 seconds wall-clock.
-///
-/// If the tool lacks coverage routing (re-runs all tests per mutant) this
-/// fails because the slow no-coverage test adds ~2-4s per mutant across
-/// 50-80 mutants.
+/// Marker file path in the system temp dir, unique per test process.
+fn marker_path() -> PathBuf {
+    std::env::temp_dir().join(format!("dm_routing_marker_{}.txt", std::process::id()))
+}
+
+fn count_marker_lines() -> usize {
+    let p = marker_path();
+    if !p.exists() {
+        return 0;
+    }
+    let mut s = String::new();
+    std::fs::File::open(&p)
+        .expect("marker file exists")
+        .read_to_string(&mut s)
+        .expect("read marker");
+    s.lines().count()
+}
+
+/// A full medium run with the routing probe in place must execute the probe
+/// exactly once (baseline only), proving non-covering tests are not re-run
+/// per mutant.
 #[test]
 fn test_coverage_routing_skips_noncovering_tests() {
-    let start = Instant::now();
-    let (output, stdout) = run_mutant("medium", &["--format", "json", "--quiet", "--no-color"]);
-    let elapsed = start.elapsed();
+    // Clean slate: remove any marker from previous runs.
+    let marker = marker_path();
+    let _ = std::fs::remove_file(&marker);
 
-    // The run must still succeed.
+    // Run the full medium fixture with the marker env var set. The env var
+    // is inherited by the tool's child `dart test` processes, so the probe
+    // test appends a line every time it executes.
+    let (output, stdout) = run_mutant_with_env(
+        "medium",
+        &["--format", "json", "--quiet", "--no-color"],
+        &[(
+            "DM_ROUTING_MARKER",
+            marker.to_str().expect("marker path utf8"),
+        )],
+    );
+
+    // The run must succeed.
     assert_eq!(
         output.status.code(),
         Some(0),
@@ -46,15 +82,21 @@ fn test_coverage_routing_skips_noncovering_tests() {
     assert!(
         total >= 50,
         "routing test sanity: expected total >= 50 on medium, got {total}; \
-         a near-empty run would make the timing assertion meaningless"
+         a near-empty run would make the routing assertion meaningless"
     );
 
-    // The real assertion: wall-clock under 10s.
-    assert!(
-        elapsed.as_secs() < 10,
-        "medium full run took {:?} — expected < 10s. \
-         If the tool has no coverage routing it re-runs all tests per mutant, \
-         including the slow no-coverage test (~2-4s), blowing the budget.",
-        elapsed
+    // The real assertion: the probe ran exactly once (baseline coverage
+    // collection). If the tool re-ran the full suite per mutant, it would
+    // have run total+1 times.
+    let runs = count_marker_lines();
+    assert_eq!(
+        runs, 1,
+        "routing probe executed {runs} times; expected exactly 1 (baseline only). \
+         If it ran {}+ times the tool is re-running non-covering tests per mutant \
+         (no per-test coverage routing).",
+        total
     );
+
+    // Clean up the marker.
+    let _ = std::fs::remove_file(&marker);
 }
