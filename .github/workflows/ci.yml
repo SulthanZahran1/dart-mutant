@@ -54,6 +54,10 @@ jobs:
       # Unit tests + integration suite (harness, correctness, routing, reports,
       # contract, tce, scale is separate). On Windows the Dart SDK from
       # setup-dart runs the fixture test suites natively.
+      #
+      # --test-threads=1: the integration tests mutate the shared fixture
+      # files on disk (schemata injection + restore per mutant), so test
+      # binaries must not run concurrently or they corrupt each other.
       - name: Resolve fixture dependencies (dart pub get)
         shell: bash
         run: |
@@ -63,8 +67,8 @@ jobs:
             (cd "$f" && dart pub get)
           done
 
-      - name: Test (unit + integration)
-        run: cargo test --workspace
+      - name: Test (unit + integration, serial)
+        run: cargo test --workspace -- --test-threads=1
 
   # GOAL-1.0 criterion 5: Flutter execution path against the real Flutter SDK.
   flutter:
@@ -157,4 +161,4 @@ jobs:
         run: cd tests/fixtures/large && dart pub get
 
       - name: Scale gate — cold < 600s, warm < 30s
-        run: cargo test -p dart-mutant --test scale -- --ignored
+        run: cargo test -p dart-mutant --test scale -- --ignored --test-threads=1
