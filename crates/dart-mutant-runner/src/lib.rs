@@ -215,7 +215,7 @@ pub fn run(
     let coverage_map = coverage::build_coverage_map(&coverage, mutants)?;
 
     // Stage 3: Initialize cache (if enabled)
-    let cache = if config.use_cache {
+    let mut cache = if config.use_cache {
         Some(cache::Cache::new(&config.cache_dir))
     } else {
         None
@@ -241,7 +241,7 @@ pub fn run(
         schemata,
         &coverage_map,
         &timeout_calc,
-        cache.as_ref(),
+        cache.as_mut(),
         config,
     )?;
 
