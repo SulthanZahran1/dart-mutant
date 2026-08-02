@@ -10,34 +10,151 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # GOAL-1.0 criterion 2: real-SDK matrix — Linux + Windows × real Dart SDK.
+  # Runs unit tests + the integration suite in crates/dart-mutant/tests
+  # (fixtures are committed under tests/fixtures, so they're present in the
+  # checkout). Integration tests drive the real binary via CARGO_BIN_EXE.
   test:
-    runs-on: ubuntu-latest
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dart-lang/setup-dart@v1
+
+      - name: Install Dart SDK (real SDK, stable)
+        uses: dart-lang/setup-dart@v1
         with:
           sdk: stable
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
-          path: ~/.cargo/registry
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-      - name: Cache cargo build
+
+      - name: Build (release)
+        run: cargo build --release
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy -- -D warnings
+
+      - name: Format check
+        run: cargo fmt -- --check
+
+      # Unit tests + integration suite (harness, correctness, routing, reports,
+      # contract, tce, scale is separate). On Windows the Dart SDK from
+      # setup-dart runs the fixture test suites natively.
+      - name: Resolve fixture dependencies (dart pub get)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in tests/fixtures/small tests/fixtures/medium tests/fixtures/large; do
+            echo "== $f =="
+            (cd "$f" && dart pub get)
+          done
+
+      - name: Test (unit + integration)
+        run: cargo test --workspace
+
+  # GOAL-1.0 criterion 5: Flutter execution path against the real Flutter SDK.
+  flutter:
+    name: flutter (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Flutter SDK (real SDK, stable channel)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Install Dart SDK (for the CLI's `dart` subprocess)
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache cargo registry
         uses: actions/cache@v4
         with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
-      - name: Check formatting
-        run: cargo fmt -- --check
-      - name: Clippy
-        run: cargo clippy -- -D warnings
-      - name: Build
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build (release)
         run: cargo build --release
-      - name: Unit tests
-        run: cargo test --lib
-      - name: Verify CLI
-        run: ./target/release/dart_mutant --version
+
+      - name: Flutter fixture — pub get + flutter test
+        working-directory: tests/fixtures/flutter
+        run: |
+          flutter pub get
+          flutter test
+
+      # Run the real release binary against the Flutter fixture. Exit code must
+      # be 0 (default threshold is 0 → always pass) and stdout must be valid
+      # JSON with the frozen summary fields.
+      - name: dart_mutant against Flutter fixture (JSON contract)
+        run: |
+          set -euo pipefail
+          ./target/release/dart_mutant --path tests/fixtures/flutter \
+            --format json --quiet --no-color > /tmp/flutter-report.json
+          python3 - <<'EOF'
+          import json, sys
+          with open("/tmp/flutter-report.json") as f:
+              report = json.load(f)
+          for field in ("mutationScore", "killed", "survived", "timeout",
+                        "equivalent", "notCovered", "compileError", "files"):
+              assert field in report, f"JSON missing field: {field}"
+          assert report["total"] > 0, "expected at least one mutant"
+          print(f"JSON OK — {report['total']} mutants, "
+                f"MSI {report['mutationScore']}")
+          EOF
+
+  # GOAL-1.0 criterion 4: performance scale gate on the large fixture.
+  # The #[ignore]d scale suite asserts cold < 600s and warm < 30s.
+  scale-gate:
+    name: scale-gate (large fixture, cold+warm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Dart SDK (real SDK, stable)
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build (release)
+        run: cargo build --release
+
+      - name: Resolve large fixture dependencies (dart pub get)
+        run: cd tests/fixtures/large && dart pub get
+
+      - name: Scale gate — cold < 600s, warm < 30s
+        run: cargo test -p dart-mutant --test scale -- --ignored

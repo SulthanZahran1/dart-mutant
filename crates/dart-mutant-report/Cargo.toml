@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "Report generation for dart_mutant — Stryker JSON, JUnit XML, HTML"
 
 [dependencies]

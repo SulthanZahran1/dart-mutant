@@ -79,3 +79,39 @@ jobs:
         with:
           files: dist/dart_mutant-*
           generate_release_notes: true
+
+  # GOAL-1.0 criterion 7: publish all workspace crates to crates.io on tag.
+  # Publishes in dependency order: core first, then the crates that depend on
+  # it, the CLI binary last. Each `cargo publish -p <crate>` resolves its
+  # workspace deps against crates.io, so every dependency must already be
+  # published before the dependent crate.
+  #
+  # HUMAN TASK: set the CARGO_REGISTRY_TOKEN secret in repo settings
+  # (Settings → Secrets and variables → Actions). It must be a crates.io API
+  # token with publish-new + publish-update scopes. Until it's set, this job
+  # fails with "no token found" — that's the milestone's known human step.
+  publish-crates:
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Publish dart-mutant-core
+        run: cargo publish -p dart-mutant-core
+
+      - name: Publish dart-mutant-runner
+        run: cargo publish -p dart-mutant-runner
+
+      - name: Publish dart-mutant-report
+        run: cargo publish -p dart-mutant-report
+
+      - name: Publish dart-mutant-tce
+        run: cargo publish -p dart-mutant-tce
+
+      - name: Publish dart-mutant (CLI)
+        run: cargo publish -p dart-mutant
