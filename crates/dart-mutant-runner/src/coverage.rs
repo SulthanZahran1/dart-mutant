@@ -245,6 +245,11 @@ fn parse_lcov(lcov_content: &str) -> HashMap<String, Vec<(String, usize)>> {
 
 /// Normalize a file path to be relative (strip leading `./`, absolute prefixes).
 fn normalize_path(path: &str) -> String {
+    // Windows coverage JSON emits absolute paths with backslash separators
+    // (e.g. `C:\repo\lib\foo.dart`). Normalize them to forward slashes so
+    // suffix matching against tree-sitter's `/`-separated `file_path` works
+    // on all platforms.
+    let path = path.replace('\\', "/");
     let path = path.trim_start_matches("./");
     // Strip `package:` URIs from Dart coverage: `package:math_utils/math_utils.dart`
     if let Some(pkg) = path.strip_prefix("package:") {

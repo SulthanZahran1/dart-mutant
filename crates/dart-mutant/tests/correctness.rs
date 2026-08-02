@@ -96,17 +96,19 @@ fn test_all_six_statuses() {
 }
 
 /// Threshold / error exit-code contract:
-/// - small with `--threshold 99` → exit 1 (MSI below threshold)
+/// - medium with `--threshold 99` → exit 1 (MSI below threshold; medium is
+///   MSI 88.9, not 100 — the small fixture is deliberately 100% killed so it
+///   would always pass a 99% threshold)
 /// - small with `--threshold 0`  → exit 0 (always passes)
 /// - a nonexistent `--path`      → exit 2 (error)
 #[test]
 fn test_threshold_exit_codes() {
-    // 99% threshold: a real test suite won't hit 99% MSI → exit 1.
-    let (out_above, _) = run_mutant("small", &["--threshold", "99", "--quiet"]);
+    // 99% threshold: medium's MSI (88.9) is below 99% → exit 1.
+    let (out_above, _) = run_mutant("medium", &["--threshold", "99", "--quiet"]);
     assert_eq!(
         out_above.status.code(),
         Some(1),
-        "small --threshold 99: expected exit 1 (below threshold)"
+        "medium --threshold 99: expected exit 1 (below threshold)"
     );
 
     // 0% threshold: anything passes → exit 0.
