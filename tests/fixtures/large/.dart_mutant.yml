@@ -1,0 +1,20 @@
+# Large fixture — all 17 operators enabled. 8 files, 200+ mutants,
+# MSI ~65% (tests assert on ~2/3 of paths; survivors by design).
+operators:
+  - AOR
+  - AOD
+  - AOI
+  - ROR
+  - LOR
+  - LCR
+  - COR
+  - SDL
+  - RVR
+  - INC
+  - NullSafety
+  - NullAssert
+  - OptionalChaining
+  - Cascade
+  - AsyncAwait
+  - StreamMutation
+  - SealedExhaustiveness

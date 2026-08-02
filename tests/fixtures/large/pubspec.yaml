@@ -1,0 +1,6 @@
+name: fixture_large
+description: Large integration fixture for dart_mutant.
+environment:
+  sdk: ^3.0.0
+dev_dependencies:
+  test: ^1.24.0
