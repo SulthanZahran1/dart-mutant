@@ -24,6 +24,22 @@
 
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::{Mutex, MutexGuard, OnceLock};
+
+/// Serializes integration tests that mutate the shared fixture files.
+///
+/// dart_mutant injects mutants into the fixture sources on disk and restores
+/// them after each mutant run. Two tests running concurrently against the
+/// same fixture (cargo's default parallel test threads) corrupt each other
+/// — e.g. one test observes `killed: 0` while another is mid-mutation.
+/// Every helper that runs the binary takes this guard, so the whole suite
+/// is effectively serial regardless of `--test-threads`.
+static FIXTURE_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+/// Acquire the global fixture lock; held for the duration of a run.
+pub fn fixture_lock() -> MutexGuard<'static, ()> {
+    FIXTURE_LOCK.get_or_init(|| Mutex::new(())).lock().unwrap()
+}
 
 /// Absolute path to the dart-mutant binary built for this test run.
 ///
@@ -62,6 +78,7 @@ pub fn fixture_dir(name: &str) -> PathBuf {
 ///
 /// Panics with a clear message if the binary cannot be spawned.
 pub fn run_mutant(fixture: &str, extra_args: &[&str]) -> (std::process::Output, String) {
+    let _guard = fixture_lock();
     let path = fixture_dir(fixture);
     let mut cmd = Command::new(bin());
     cmd.arg("--path").arg(&path);
@@ -78,6 +95,7 @@ pub fn run_mutant(fixture: &str, extra_args: &[&str]) -> (std::process::Output, 
 /// Run dart-mutant with a literal `--path` value (used for the nonexistent-path
 /// exit-code test where we deliberately pass a bad path).
 pub fn run_mutant_raw(path_arg: &str, extra_args: &[&str]) -> (std::process::Output, String) {
+    let _guard = fixture_lock();
     let mut cmd = Command::new(bin());
     cmd.arg("--path").arg(path_arg);
     for a in extra_args {
@@ -98,6 +116,7 @@ pub fn run_mutant_with_env(
     extra_args: &[&str],
     env: &[(&str, &str)],
 ) -> (std::process::Output, String) {
+    let _guard = fixture_lock();
     let path = fixture_dir(fixture);
     let mut cmd = Command::new(bin());
     cmd.arg("--path").arg(&path);
