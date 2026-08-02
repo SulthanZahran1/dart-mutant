@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sulthanzahran1.github.io/dart-mutant/sitemap.xml

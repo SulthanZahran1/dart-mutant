@@ -1,6 +1,6 @@
-# dart_mutant
+# dart_mutant — Mutation Testing for Dart & Flutter
 
-**AST-based mutation testing for Dart and Flutter.** Injects deliberate faults (mutants) into your Dart source, runs your tests against each one, and reports which mutants your tests failed to catch — giving you a **Mutation Score Indicator (MSI)** that's far more meaningful than line coverage.
+**The AST-based mutation testing tool for Dart.** `dart_mutant` injects deliberate faults (mutants) into your Dart and Flutter source code, runs your tests against each one, and reports which mutants your tests failed to catch — giving you a **Mutation Score Indicator (MSI)** that is far more meaningful than line coverage. If you're looking for **dart mutation testing** or **flutter mutation testing**, this is the tool that finds the tests that miss real bugs.
 
 Dart had almost no mutation-testing supply (the only existing tools were a 15-star proof-of-concept and a regex-based replacer). `dart_mutant` is the first proper AST-level, Dart-native mutation tester — with operators for the constructs that make Dart unique: **null safety, cascades, async/await, streams, and sealed classes**.
 

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dart_mutant — Mutation Testing for Dart &amp; Flutter | AST-based, Rust, 17 operators</title>
+<meta name="description" content="dart_mutant is an AST-based mutation testing tool for Dart and Flutter written in Rust. 17 mutation operators including null-safety, cascade, async/await, streams and sealed classes. Coverage routing, TCE equivalent-mutant detection, Stryker JSON, JUnit XML and HTML reports. Install in one command.">
+<meta name="keywords" content="dart mutation testing, dart_mutant, flutter mutation testing, mutation testing dart, mutation test tool, mutation score, MSI, mutant testing, dart testing tools, stryker dart, test quality, code coverage alternative, rust mutation testing, tree-sitter dart, null safety mutation">
+<meta name="author" content="Sulthan Zahran">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://sulthanzahran1.github.io/dart-mutant/">
+<meta property="og:type" content="software">
+<meta property="og:title" content="dart_mutant — Mutation Testing for Dart &amp; Flutter">
+<meta property="og:description" content="AST-based mutation testing for Dart/Flutter: 17 operators, coverage routing, TCE equivalent detection, Stryker-compatible reports. Find the tests that miss real bugs.">
+<meta property="og:url" content="https://sulthanzahran1.github.io/dart-mutant/">
+<meta property="og:image" content="https://sulthanzahran1.github.io/dart-mutant/og-image.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="dart_mutant — Mutation Testing for Dart &amp; Flutter">
+<meta name="twitter:description" content="AST-based mutation testing for Dart/Flutter: 17 operators, coverage routing, TCE equivalent detection, Stryker-compatible reports.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "dart_mutant",
+  "alternateName": "dart-mutant",
+  "description": "AST-based mutation testing tool for Dart and Flutter, written in Rust. Injects deliberate faults (mutants) into Dart source code and runs the test suite against each one to measure test effectiveness with the Mutation Score Indicator (MSI).",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Linux, macOS, Windows",
+  "softwareVersion": "0.1.0",
+  "url": "https://github.com/SulthanZahran1/dart-mutant",
+  "sameAs": [
+    "https://sulthanzahran1.github.io/dart-mutant/",
+    "https://crates.io/crates/dart-mutant"
+  ],
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "Sulthan Zahran",
+    "url": "https://github.com/SulthanZahran1"
+  },
+  "keywords": "dart mutation testing, flutter mutation testing, mutation score, MSI, mutation testing tool, test quality, tree-sitter, rust, stryker, null safety mutation, cascade mutation, async await mutation, sealed class mutation",
+  "featureList": [
+    "17 mutation operators: 10 generic + 7 Dart-specific (null safety, cascade, async/await, streams, sealed classes)",
+    "Coverage routing: runs only tests covering the mutated line",
+    "Trivial Compiler Equivalence (TCE) equivalent-mutant detection via Dart kernel bytecode comparison",
+    "Adaptive timeouts (baseline × coefficient)",
+    "Parallel execution with Rayon + SHA-256 incremental cache",
+    "Stryker-compatible JSON, JUnit XML, HTML reports",
+    "Agent-friendly: pure JSON stdout, exit codes 0/1/2"
+  ]
+}
+</script>
+<style>
+:root { --bg:#1e1e2e; --fg:#cdd6f4; --card:#313244; --border:#585b70; --accent:#89b4fa; --green:#a6e3a1; --yellow:#f9e2af; --red:#f38ba8; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--fg); line-height:1.65; padding:2rem 1rem; }
+.container { max-width:900px; margin:0 auto; }
+h1 { font-size:2.2rem; margin-bottom:.5rem; color:#fff; }
+h2 { font-size:1.4rem; margin:2.5rem 0 1rem; color:var(--accent); border-bottom:1px solid var(--border); padding-bottom:.4rem; }
+a { color:var(--accent); }
+code { background:var(--card); padding:.15rem .4rem; border-radius:4px; font-size:.9em; }
+pre { background:var(--card); padding:1rem; border-radius:8px; overflow-x:auto; border:1px solid var(--border); margin:1rem 0; }
+.tagline { font-size:1.15rem; color:#a6adc8; margin-bottom:1.5rem; }
+.badge { display:inline-block; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:.2rem .8rem; margin:.2rem .2rem; font-size:.85rem; }
+.badges { margin:1rem 0 2rem; }
+table { border-collapse:collapse; width:100%; margin:1rem 0; }
+th,td { border:1px solid var(--border); padding:.5rem .8rem; text-align:left; font-size:.95rem; }
+th { background:var(--card); }
+.green { color:var(--green); } .yellow { color:var(--yellow); } .red { color:var(--red); }
+.btn { display:inline-block; background:var(--accent); color:#11111b; font-weight:600; padding:.6rem 1.4rem; border-radius:8px; text-decoration:none; margin:.3rem .3rem 0 0; }
+.btn.secondary { background:var(--card); color:var(--fg); border:1px solid var(--border); }
+footer { margin-top:3rem; color:#6c7086; font-size:.85rem; border-top:1px solid var(--border); padding-top:1rem; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>dart_mutant 🧬</h1>
+<div class="tagline">AST-based <strong>mutation testing for Dart and Flutter</strong>, written in Rust. Inject bugs into your code, run your tests, and find the gaps line coverage can't see.</div>
+<div class="badges">
+<span class="badge">17 operators</span><span class="badge">Null-safety mutations</span><span class="badge">Cascade mutations</span><span class="badge">Async/await mutations</span><span class="badge">Coverage routing</span><span class="badge">TCE equivalent detection</span><span class="badge">Stryker JSON</span><span class="badge">Rust</span><span class="badge">tree-sitter</span><span class="badge">MIT</span>
+</div>
+<a class="btn" href="https://github.com/SulthanZahran1/dart-mutant">GitHub</a>
+<a class="btn secondary" href="https://github.com/SulthanZahran1/dart-mutant/releases">Releases</a>
+<a class="btn secondary" href="#install">Install</a>
+
+<h2 id="install">Install in one command</h2>
+<pre>curl -fsSL https://raw.githubusercontent.com/SulthanZahran1/dart-mutant/main/scripts/install.sh | bash</pre>
+<p>Or via Homebrew: <code>brew install SulthanZahran1/tap/dart_mutant</code> &nbsp;·&nbsp; Pre-built binaries for Linux (static musl), macOS (Intel + Apple Silicon), Windows on <a href="https://github.com/SulthanZahran1/dart-mutant/releases">GitHub Releases</a>.</p>
+
+<h2>Why mutation testing?</h2>
+<p>Code coverage tells you what code <em>runs</em> during tests. Mutation testing tells you what your tests actually <em>verify</em>. A line can be 100% covered and still harbor a bug your tests would never catch. dart_mutant systematically injects small, deliberate faults (mutants) and runs your tests against each one — a mutant that <strong>survives</strong> is a test gap.</p>
+
+<h2>Quick start</h2>
+<pre>cd my-dart-project
+dart_mutant                          # auto-detect, run everything
+dart_mutant --threshold 80           # CI gate: exit 0 if MSI ≥ 80
+dart_mutant --format json --quiet    # pure JSON for CI dashboards & AI agents
+dart_mutant --detect-equivalent      # TCE equivalent-mutant detection
+dart_mutant --mutant 42              # re-run one mutant after writing a killing test</pre>
+
+<h2>Mutation operators</h2>
+<table>
+<tr><th>Category</th><th>Operators</th><th>Examples</th></tr>
+<tr><td>Arithmetic</td><td>AOR, AOD, AOI</td><td><code>+</code>→<code>-</code>, <code>a + b</code>→<code>a</code>, <code>a</code>→<code>a + 1</code></td></tr>
+<tr><td>Relational</td><td>ROR</td><td><code>&gt;</code>→<code>&gt;=</code>, <code>==</code>→<code>!=</code></td></tr>
+<tr><td>Logical</td><td>LOR, LCR, COR</td><td><code>&amp;&amp;</code>→<code>||</code>, negation</td></tr>
+<tr><td>Statement</td><td>SDL</td><td>delete statement</td></tr>
+<tr><td>Return / Loop</td><td>RVR, INC/DEC</td><td><code>return x</code>→<code>return null</code>, loop counters</td></tr>
+<tr><td><strong>Null safety</strong> 🎯</td><td>NullSafety, NullAssert, OptionalChaining</td><td><code>??</code> removal, <code>!</code> removal, <code>?.</code>→<code>.</code></td></tr>
+<tr><td><strong>Cascade</strong> 🎯</td><td>Cascade</td><td><code>..</code>→<code>.</code></td></tr>
+<tr><td><strong>Async/await</strong> 🎯</td><td>AsyncAwait</td><td>remove <code>await</code></td></tr>
+<tr><td><strong>Streams</strong> 🎯</td><td>StreamMutation</td><td>stream operator changes</td></tr>
+<tr><td><strong>Sealed classes</strong> 🎯</td><td>SealedExhaustiveness</td><td>switch exhaustiveness</td></tr>
+</table>
+<p>🎯 = Dart-specific — these are the constructs that make Dart unique and that generic mutation tools miss.</p>
+
+<h2>Interpreting results</h2>
+<table>
+<tr><th>Status</th><th>Meaning</th><th>Action</th></tr>
+<tr><td class="green">KILLED</td><td>tests caught the mutation</td><td>nothing</td></tr>
+<tr><td class="red">SURVIVED</td><td>tests missed it</td><td>write a test that fails under the mutation</td></tr>
+<tr><td class="yellow">TIMEOUT</td><td>mutation caused a hang</td><td>boundary-input tests for loops</td></tr>
+<tr><td>EQUIVALENT</td><td>bytecode-identical, unkillable</td><td>excluded from score</td></tr>
+<tr><td>NOT_COVERED</td><td>no test reaches the line</td><td>add coverage</td></tr>
+<tr><td>COMPILE_ERROR</td><td>invalid Dart produced</td><td>&lt;2% expected</td></tr>
+</table>
+
+<h2>Performance engineering</h2>
+<ul>
+<li><strong>Coverage routing</strong> — only test files covering the mutated line run per mutant</li>
+<li><strong>Schemata</strong> — mutations injected via <code>DART_MUTANT_ID</code> env switch, compile once</li>
+<li><strong>Parallel</strong> — Rayon across CPU cores, per-file grouping avoids contention</li>
+<li><strong>Adaptive timeout</strong> — baseline duration × 3, bounded 5s–5min</li>
+<li><strong>Incremental cache</strong> — SHA-256 content-addressed, warm reruns in seconds</li>
+</ul>
+
+<h2>Reports</h2>
+<ul>
+<li>Stryker-compatible JSON (mutation-testing-elements schema v2)</li>
+<li>JUnit XML for CI dashboards</li>
+<li>Self-contained HTML report with per-file heatmap</li>
+<li>Console summary with MSI breakdown</li>
+</ul>
+
+<h2>Resources</h2>
+<ul>
+<li><a href="https://github.com/SulthanZahran1/dart-mutant">GitHub repository</a></li>
+<li><a href="https://github.com/SulthanZahran1/dart-mutant/blob/main/README.md">README — full docs</a></li>
+<li><a href="https://github.com/SulthanZahran1/dart-mutant/releases">Releases &amp; binaries</a></li>
+<li><a href="https://github.com/SulthanZahran1/dart-mutant/blob/main/llms.txt">llms.txt — agent-friendly summary</a></li>
+</ul>
+
+<footer>
+<p>dart_mutant is an open-source (MIT) project. Built with Rust + tree-sitter. Report issues on <a href="https://github.com/SulthanZahran1/dart-mutant/issues">GitHub Issues</a>.</p>
+</footer>
+</div>
+</body>
+</html>

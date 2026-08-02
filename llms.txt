@@ -1,0 +1,69 @@
+# dart_mutant
+
+> AST-based mutation testing tool for Dart and Flutter, written in Rust.
+> Injects deliberate faults (mutants) into Dart source code and runs the test suite against each one to measure how well tests actually detect bugs. Mutation Score (MSI) is a stronger quality gate than line coverage.
+
+## What this is
+
+dart_mutant is a command-line tool that helps Dart and Flutter developers find gaps in their test suites. It scans `lib/` for mutation candidates (arithmetic operators, comparisons, boolean logic, null-safety operators, cascades, async/await, streams, sealed classes), applies each mutation to a temporary copy of the source, runs the relevant tests, and classifies the outcome: KILLED (tests caught it), SURVIVED (tests missed it), TIMEOUT, EQUIVALENT (bytecode-identical), NOT_COVERED, or COMPILE_ERROR.
+
+Key differentiators vs other mutation tools:
+- 17 mutation operators: 10 generic (AOR, AOD, AOI, ROR, LOR, LCR, COR, SDL, RVR, loop inc/dec) + 7 Dart-specific (NullSafety `??`, NullAssert `!`, OptionalChaining `?.`, Cascade `..`, AsyncAwait removal, StreamMutation, SealedClassExhaustiveness)
+- Coverage routing: runs only the test files that cover the mutated line (Dart VM coverage JSON), not the full suite
+- Trivial Compiler Equivalence (TCE): compiles original and mutant to Dart kernel and compares bytecode to detect unkillable mutants
+- Adaptive timeouts: baseline duration × coefficient (default 3.0), bounded 5s–5min
+- Parallel execution via Rayon, content-addressed SHA-256 cache for warm reruns
+- Stryker-compatible JSON (schema v2), JUnit XML, self-contained HTML report, console summary
+- Agent-friendly: `--format json --quiet` emits pure JSON on stdout; exit codes 0=pass, 1=below threshold, 2=error
+
+## Install
+
+One-shot (auto-detects OS/arch, installs to ~/.local/bin):
+```bash
+curl -fsSL https://raw.githubusercontent.com/SulthanZahran1/dart-mutant/main/scripts/install.sh | bash
+```
+
+Homebrew: `brew install SulthanZahran1/tap/dart_mutant`
+
+Pre-built binaries (GitHub Releases): x86_64-unknown-linux-musl (static, runs on any Linux), aarch64-apple-darwin, x86_64-apple-darwin, x86_64-pc-windows-msvc.
+
+Prerequisite: Dart SDK 3.0+ on PATH.
+
+## Quick start
+
+```bash
+cd my-dart-project
+dart_mutant                  # auto-detects lib/, dart test, all operators
+dart_mutant --threshold 80   # CI gate: exit 0 if MSI >= 80
+dart_mutant --format json --quiet   # pure JSON for CI/agents
+dart_mutant --detect-equivalent     # TCE equivalent-mutant detection
+dart_mutant --mutant 42             # re-run a single mutant after writing a killing test
+```
+
+## Configuration
+
+CLI flags > `.dart_mutant.yml` > defaults. Key options: `--path`, `--threshold`, `--parallel`, `--format console,json,html,junit`, `--operators AOR,ROR,NullSafety`, `--sample N`, `--mutant ID`, `--incremental --base-ref main`, `--exclude "*.g.dart,*.freezed.dart"`, `--timeout-coefficient 3.0`, `--quiet`, `--no-color`.
+
+## Interpreting results
+
+| Status | Meaning |
+|---|---|
+| KILLED | tests caught the mutation — good |
+| SURVIVED | tests missed it — write a test that fails under the mutation |
+| TIMEOUT | mutation caused a hang — add boundary-input tests |
+| EQUIVALENT | bytecode-identical, unkillable — excluded from score |
+| NOT_COVERED | no test reaches the line — add coverage |
+| COMPILE_ERROR | invalid Dart produced — should stay under 2% |
+
+## Docs
+
+- README with full install matrix and operator catalog: https://github.com/SulthanZahran1/dart-mutant/blob/main/README.md
+- Verifiable acceptance criteria: https://github.com/SulthanZahran1/dart-mutant/blob/main/GOAL.md
+- Architecture and conventions: https://github.com/SulthanZahran1/dart-mutant/blob/main/AGENTS.md
+- GitHub Releases (pre-built binaries): https://github.com/SulthanZahran1/dart-mutant/releases
+
+## Repository
+
+https://github.com/SulthanZahran1/dart-mutant
+
+Maintained by Sulthan Zahran. License: MIT.
