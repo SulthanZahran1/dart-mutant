@@ -132,3 +132,17 @@ The tool must be installable in ≤1 command with zero manual steps, and usable 
 
 **Test:** Run `curl -fsSL .../install.sh | bash` on Linux x86_64, macOS arm64, and macOS x86_64. Then run `dart_mutant --format json --quiet` against a fixture project.
 **Pass:** Binary installed in ≤1 command. JSON output is valid and parseable. Exit code correct for threshold gate.
+
+---
+
+## Implementation Rules
+
+### Commit atomically
+
+Every commit must be a single, self-contained, reviewable unit of work. One commit = one feature/fix — not "everything in the session" and not a single atomic sub-change. The test is: *would a reviewer want to review/revert this as a single PR?*
+
+- Commit each implemented feature **as soon as it's verified** — don't wait to be asked.
+- Stage explicit paths only — never `git add -A` on a tree edited by concurrent agents.
+- Run `cargo test` + `cargo clippy` before each commit. Never commit code that doesn't compile or fails tests.
+- Commit message format: `type: short description` (e.g. `feat: add NullSafety operator`, `fix: timeout calculation in scheduler`, `docs: update usage examples`).
+- Never push directly to `main` — always branch → PR → merge.
