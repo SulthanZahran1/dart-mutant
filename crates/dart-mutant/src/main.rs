@@ -79,6 +79,7 @@ fn run() -> Result<u8> {
 /// `docs/cli-json-contract.md`. Bump only on a breaking change (major
 /// version, e.g. `2.0`); additive changes keep `1.0`.
 #[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PipelineSummary {
     /// Agent-facing JSON schema version. Serialized as `schemaVersion`.
     /// Frozen at `"1.0"` — additive-only changes keep this value; breaking
@@ -101,6 +102,7 @@ pub struct PipelineSummary {
 
 /// Per-file mutation summary.
 #[derive(Debug, Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FileSummary {
     pub path: String,
     pub mutation_score: f64,

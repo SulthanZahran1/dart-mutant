@@ -39,6 +39,8 @@ only); existing flags keep their current names, types, and exit behavior.
 When `--format json` (commonly with `--quiet --no-color`) is used, a single JSON
 object is printed to **stdout**. This is the agent-facing schema:
 
+- **Field naming**: all multi-word fields are **camelCase** (e.g.
+  `mutationScore`, `notCovered`, `compileError`).
 - **`schemaVersion`**: `"1.0"` — always the **first** key. Bumped only on a
   breaking change to this contract.
 
