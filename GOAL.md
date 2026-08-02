@@ -1,6 +1,6 @@
 # GOAL — dart_mutant
 
-> **Status:** live spec — in flight, not yet implemented.
+> **Status:** living — implemented, maintained. Acceptance criteria validated on 2026-08-02 against a real Dart fixture (143 mutants, 119 killed, 0 compile errors, 100% JSON stdout purity, correct exit codes 0/1/2).
 
 Build an AST-based mutation testing tool for Dart that compiles once via mutant schemata, routes each mutant only to covering tests, classifies all 6 mutant states including equivalent-mutant detection via Dart kernel/bytecode comparison, produces Stryker-compatible JSON + JUnit XML + HTML reports, implements ≥6 Dart-specific operators (null safety, cascade, async/await, streams, sealed classes), completes a 500-mutant cold run in under 10 minutes with a <2% compilation failure rate, and is installable in ≤1 command with machine-readable JSON output for AI agent integration.
 
