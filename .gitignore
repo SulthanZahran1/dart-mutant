@@ -1,0 +1,41 @@
+# Build artifacts
+/target/
+**/target/
+
+# Cargo lock (binary, not library)
+# Keep Cargo.lock for binaries — uncomment if this becomes a lib-only workspace
+# Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Dart test fixtures: generated coverage and build artifacts
+tests/fixtures/**/.dart_tool/
+tests/fixtures/**/.packages
+tests/fixtures/**/build/
+tests/fixtures/**/.flutter-plugins
+tests/fixtures/**/.flutter-plugins-dependencies
+tests/fixtures/**/coverage/
+tests/fixtures/**/*.gcda
+tests/fixtures/**/*.gcno
+
+# Generated mutation reports (local runs)
+mutation-reports/
+*.mutation-report.json
+*.mutation-results.xml
+*.mutation-report.html
+
+# dart_mutant cache (content-addressed, local only)
+.dart_mutant_cache/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
