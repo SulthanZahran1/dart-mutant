@@ -5,7 +5,7 @@
 
 mod common;
 
-use common::{parse_and_check_schema, run_mutant, run_mutant_raw};
+use common::{parse_and_check_schema, run_mutant, run_mutant_raw, run_mutant_with_env};
 
 /// On both the medium and large fixtures, the compile-error rate
 /// (`compileError / total`) must be strictly under 2%.
@@ -50,7 +50,13 @@ fn test_compile_error_rate_under_2pct() {
 /// field presence, not a non-zero count).
 #[test]
 fn test_all_six_statuses() {
-    let (output, stdout) = run_mutant("medium", &["--format", "json", "--quiet", "--no-color"]);
+    // DM_FORCE_LOG=1: keep the tool's internal diagnostics on stderr even
+    // under --quiet, so a CI failure carries the coverage/routing warnings.
+    let (output, stdout) = run_mutant_with_env(
+        "medium",
+        &["--format", "json", "--quiet", "--no-color"],
+        &[("DM_FORCE_LOG", "1")],
+    );
 
     assert_eq!(
         output.status.code(),

@@ -53,7 +53,10 @@ fn main() -> ExitCode {
 fn run() -> Result<u8> {
     let cli = Cli::parse();
 
-    if !cli.quiet {
+    // Logging is normally suppressed by `--quiet` (stdout must stay pure
+    // JSON for `--format json`). DM_FORCE_LOG=1 overrides that so CI can
+    // capture the tool's internal diagnostics even in quiet mode.
+    if !cli.quiet || std::env::var("DM_FORCE_LOG").is_ok() {
         let _ = env_logger::Builder::from_env(env_logger::Env::default())
             .format_timestamp(None)
             .try_init();
