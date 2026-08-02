@@ -33,7 +33,7 @@ use rayon::prelude::*;
 
 use dart_mutant_core::{Mutant, MutantResult, MutantStatus};
 
-use crate::cache::Cache;
+use crate::cache::{hash_for_mutant, Cache, CacheEntry};
 use crate::coverage::CoverageMap;
 use crate::timeout::TimeoutCalculator;
 use crate::{RunnerConfig, Schemata};
@@ -85,7 +85,7 @@ pub fn run_mutants(
     schemata: &Schemata,
     coverage_map: &CoverageMap,
     timeout_calc: &TimeoutCalculator,
-    cache: Option<&Cache>,
+    cache: Option<&mut Cache>,
     config: &RunnerConfig,
 ) -> Result<Vec<MutantResult>> {
     let start = Instant::now();
@@ -108,12 +108,21 @@ pub fn run_mutants(
         .build()
         .map_err(|e| anyhow::anyhow!("failed to create Rayon thread pool: {}", e))?;
 
-    // Use a mutex for cache writes (cache is shared across threads)
-    // Note: we pass cache as immutable reference; stores happen after the parallel run
-    let _cache_hits: Arc<Mutex<Vec<(usize, crate::cache::CacheEntry)>>> =
-        Arc::new(Mutex::new(Vec::new()));
+    // Shared cache handle for parallel lookups + a deferred-store buffer.
+    // The cache is only mutated after the parallel section (see below);
+    // inside the pool we use an immutable handle and collect entries.
+    let cache_hits: Arc<Mutex<Vec<(String, CacheEntry)>>> = Arc::new(Mutex::new(Vec::new()));
+    let cache_hit_count: Arc<std::sync::atomic::AtomicUsize> =
+        Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let cache_handle = cache.as_deref();
+    let cache_state = cache_handle.map(|c| CacheState {
+        cache: Some(c),
+        hits: &cache_hits,
+        hit_count: &cache_hit_count,
+    });
 
     let results: Vec<MutantResult> = pool.install(|| {
+        let cache_state_ref = &cache_state;
         file_groups
             .par_iter()
             .flat_map(|(_file, file_mutants)| {
@@ -121,25 +130,44 @@ pub fn run_mutants(
                 file_mutants
                     .iter()
                     .map(|mutant| {
-                        run_single_mutant(mutant, schemata, coverage_map, timeout_ms, cache, config)
+                        run_single_mutant(
+                            mutant,
+                            schemata,
+                            coverage_map,
+                            timeout_ms,
+                            *cache_state_ref,
+                            config,
+                        )
                     })
                     .collect::<Vec<_>>()
             })
             .collect()
     });
 
+    // Deferred cache stores: persist every new entry after the parallel run.
+    if let Some(cache) = cache {
+        let hits = cache_hits.lock().unwrap();
+        for (hash, entry) in hits.iter() {
+            if let Err(e) = cache.store(hash.clone(), entry.clone()) {
+                warn!("failed to store cache entry {}: {}", hash, e);
+            }
+        }
+    }
+
     let total_duration_ms = start.elapsed().as_millis() as u64;
 
     // Log statistics
-    let stats = compute_stats(&results, total_duration_ms);
+    let mut stats = compute_stats(&results, total_duration_ms);
+    stats.from_cache = cache_hit_count.load(std::sync::atomic::Ordering::Relaxed);
     info!(
-        "Mutation testing complete: {} total, {} killed, {} survived, {} timeout, {} not_covered, {} compile_error ({}ms)",
+        "Mutation testing complete: {} total, {} killed, {} survived, {} timeout, {} not_covered, {} compile_error, {} from_cache ({}ms)",
         stats.total,
         stats.killed,
         stats.survived,
         stats.timeout,
         stats.not_covered,
         stats.compile_errors,
+        stats.from_cache,
         stats.total_duration_ms
     );
 
@@ -195,12 +223,24 @@ pub fn run_mutants_parallel(
 /// 4. Runs the test suite with `DART_MUTANT_ID=<id>` env var
 /// 5. Classifies the result: KILLED (test failed), SURVIVED (test passed), TIMEOUT
 /// 6. Restores the original source file
+///
+/// Cache behavior: on entry, if the content-addressed hash of (mutated source,
+/// covering test files) is already cached, the cached classification is served
+/// without writing/running anything. New results are buffered into
+/// `cache_hits` (persisted by the caller after the parallel section).
+#[derive(Clone, Copy)]
+struct CacheState<'a> {
+    cache: Option<&'a Cache>,
+    hits: &'a Arc<Mutex<Vec<(String, CacheEntry)>>>,
+    hit_count: &'a Arc<std::sync::atomic::AtomicUsize>,
+}
+
 fn run_single_mutant(
     mutant: &Mutant,
     schemata: &Schemata,
     coverage_map: &CoverageMap,
     timeout_ms: u64,
-    _cache: Option<&Cache>,
+    cache_state: Option<CacheState<'_>>,
     config: &RunnerConfig,
 ) -> MutantResult {
     let covering_tests = coverage_map.covering_tests(&mutant.id).to_vec();
@@ -222,6 +262,27 @@ fn run_single_mutant(
     };
 
     let file_path = config.project_path.join(&mutant.file_path);
+
+    // Content-addressed cache lookup: hash = sha256(mutated_source || covering
+    // test file contents). Byte-identical inputs on a warm rerun (GOAL-1.0
+    // criterion 4: warm < 30s) are served without re-running tests.
+    let test_file_paths: Vec<PathBuf> = covering_tests
+        .iter()
+        .map(|t| config.project_path.join(t))
+        .collect();
+    if let Some(cs) = cache_state {
+        if let Ok(hash) = hash_for_mutant(schemata, mutant, &test_file_paths) {
+            if let Some(cached) = cs.cache.and_then(|c| c.get(&hash)) {
+                debug!(
+                    "Mutant {}: served from cache ({})",
+                    mutant.id, cached.status
+                );
+                cs.hit_count
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                return cached.to_result(mutant);
+            }
+        }
+    }
 
     // Write the mutated source to the file system
     // Read original first
@@ -302,6 +363,16 @@ fn run_single_mutant(
                 .with_message(msg)
         }
     };
+
+    // Deferred cache store: buffer the entry; the parallel section persists it.
+    if let Some(cs) = cache_state {
+        if let Ok(hash) = hash_for_mutant(schemata, mutant, &test_file_paths) {
+            let entry = CacheEntry::from_result(hash.clone(), &result);
+            if let Ok(mut hits) = cs.hits.lock() {
+                hits.push((hash, entry));
+            }
+        }
+    }
 
     result
 }
