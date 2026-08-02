@@ -11,7 +11,7 @@ FALLBACK_DIR="$HOME/.local/bin"
 # Detect OS
 OS="$(uname -s)"
 case "$OS" in
-    Linux*)  OS="unknown-linux-gnu" ;;
+    Linux*)  OS="unknown-linux-musl" ;;   # fully static musl build — runs on any Linux
     Darwin*) OS="apple-darwin" ;;
     MINGW*|MSYS*|CYGWIN*) OS="pc-windows-msvc" ;;
     *) echo "❌ Unsupported OS: $OS" >&2; exit 1 ;;
