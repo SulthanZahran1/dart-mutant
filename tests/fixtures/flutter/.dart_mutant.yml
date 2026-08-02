@@ -1,0 +1,17 @@
+# Flutter fixture configuration — exercises the `flutter test` execution path.
+# Coverage is collected as LCOV (coverage/lcov.info) and routing falls back to
+# the full suite (LCOV cannot attribute lines to individual tests; per-test
+# LCOV routing is post-1.0.0 — see docs/research/flutter-support.md).
+test_command: "flutter test"
+source_path: "lib"
+
+# Restricted operator set keeps the fixture minimal (~20 mutants, <5 min in CI):
+# AOR/AOD on `_count + 1`, ROR/COR on `_count >= 3`, SDL on statements.
+# AOI is excluded — it fires on every numeric literal in the UI code
+# (45 mutants in this file alone) and would blow up the run time.
+operators:
+  - AOR
+  - AOD
+  - ROR
+  - COR
+  - SDL
