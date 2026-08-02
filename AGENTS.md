@@ -12,6 +12,18 @@ dart_mutant is an AST-based mutation testing tool for Dart and Flutter projects.
 
 ---
 
+## Agent skills
+
+### Issue tracker
+
+Work is tracked as GitHub issues. Skills that read/write the tracker use the `gh` CLI conventions. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+Single-context layout: `CONTEXT.md` at the repo root, ADRs under `docs/adr/`. Created lazily by `/domain-modeling` when terms or decisions get resolved; absent files are not a problem. See `docs/agents/domain.md`.
+
+---
+
 ## Architecture
 
 ```
