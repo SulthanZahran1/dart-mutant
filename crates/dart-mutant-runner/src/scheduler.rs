@@ -325,11 +325,55 @@ enum TestStatus {
     Error(String),
 }
 
+/// Build the test-command arguments for a mutant run, applying coverage routing.
+///
+/// - **Empty covering tests** → no filter (full suite). The scheduler never
+///   calls this with an empty list (such mutants are classified `NOT_COVERED`
+///   earlier), but the helper is total for testability.
+/// - **LCOV baseline** (`covering_tests == ["baseline"]`) → no filter. LCOV
+///   (`flutter test --coverage`, parsed by [`coverage::parse_lcov`]) aggregates
+///   coverage across the whole suite and cannot attribute lines to individual
+///   tests, so the mutant must run against the FULL suite. Filtering with
+///   `--plain-name baseline` would match zero tests, trivially pass, and
+///   misclassify every mutant as `SURVIVED`. Per-test LCOV routing is
+///   explicitly post-1.0.0 (GOAL-1.0 criterion 5).
+/// - **File-like covering tests** (Dart JSON coverage keys, e.g.
+///   `test/foo_test.dart.vm.json`) → passed as positional test paths.
+/// - **Anything else** (test descriptions) → `--plain-name <name>`.
+fn build_test_args(test_command: &str, covering_tests: &[String]) -> Vec<String> {
+    let parts: Vec<&str> = test_command.split_whitespace().collect();
+    let mut args: Vec<String> = parts[1..].iter().map(|s| s.to_string()).collect();
+
+    let lcov_baseline =
+        !covering_tests.is_empty() && covering_tests.iter().all(|t| t == "baseline");
+    if lcov_baseline || covering_tests.is_empty() {
+        // Full-suite routing — run every test.
+        return args;
+    }
+
+    let file_like = covering_tests
+        .iter()
+        .all(|t| t.ends_with(".dart") || t.ends_with(".vm.json"));
+    if file_like {
+        // Strip `.vm.json` suffix if present; pass paths as-is.
+        for test in covering_tests {
+            let test = test.trim_end_matches(".vm.json");
+            args.push(test.to_string());
+        }
+    } else {
+        for test_name in covering_tests {
+            args.push("--plain-name".to_string());
+            args.push(test_name.clone());
+        }
+    }
+
+    args
+}
+
 /// Run the test suite for a single mutant.
 ///
 /// Sets `DART_MUTANT_ID=<id>` environment variable and runs the configured
-/// test command. If `covering_tests` is non-empty, passes `--plain-name` or
-/// test name filters to run only the covering tests.
+/// test command with the args built by [`build_test_args`].
 fn run_test_suite(
     test_command: &str,
     mutant_id: &str,
@@ -343,30 +387,7 @@ fn run_test_suite(
     }
 
     let program = parts[0];
-    let mut args: Vec<String> = parts[1..].iter().map(|s| s.to_string()).collect();
-
-    // Coverage routing: run only the tests that cover the mutated line.
-    // Dart's coverage JSON is keyed per TEST FILE (e.g. `math_utils_test.dart`),
-    // so covering tests are file names — pass them as positional args to
-    // `dart test test/foo_test.dart`. If a name is a test *description*
-    // (not a path), fall back to `--plain-name`.
-    if !covering_tests.is_empty() {
-        let file_like = covering_tests
-            .iter()
-            .all(|t| t.ends_with(".dart") || t.ends_with(".vm.json"));
-        if file_like {
-            // Strip `.vm.json` suffix if present; pass paths as-is.
-            for test in covering_tests {
-                let test = test.trim_end_matches(".vm.json");
-                args.push(test.to_string());
-            }
-        } else {
-            for test_name in covering_tests {
-                args.push("--plain-name".to_string());
-                args.push(test_name.clone());
-            }
-        }
-    }
+    let args = build_test_args(test_command, covering_tests);
 
     debug!(
         "Running: {} {} (DART_MUTANT_ID={})",
@@ -555,6 +576,52 @@ mod tests {
             &config,
         );
         assert_eq!(result.status, MutantStatus::NotCovered);
+    }
+
+    #[test]
+    fn test_build_test_args_lcov_baseline_runs_full_suite() {
+        // LCOV aggregation key → NO test filter (full-suite routing). This is
+        // the Flutter execution path: `--plain-name baseline` would run zero
+        // tests and misclassify every mutant as SURVIVED.
+        let args = build_test_args("flutter test", &["baseline".to_string()]);
+        assert_eq!(args, vec!["test"]);
+    }
+
+    #[test]
+    fn test_build_test_args_empty_runs_full_suite() {
+        let args = build_test_args("dart test", &[]);
+        assert_eq!(args, vec!["test"]);
+    }
+
+    #[test]
+    fn test_build_test_args_file_like_are_positional() {
+        // Dart JSON coverage keys are test file paths — passed positionally.
+        let args = build_test_args(
+            "dart test",
+            &[
+                "test/foo_test.dart.vm.json".to_string(),
+                "test/bar_test.dart.vm.json".to_string(),
+            ],
+        );
+        assert_eq!(
+            args,
+            vec!["test", "test/foo_test.dart", "test/bar_test.dart"]
+        );
+    }
+
+    #[test]
+    fn test_build_test_args_descriptions_use_plain_name() {
+        // Test descriptions (non-file names) → --plain-name filter.
+        let args = build_test_args("dart test", &["my test".to_string()]);
+        assert_eq!(args, vec!["test", "--plain-name", "my test"]);
+    }
+
+    #[test]
+    fn test_build_test_args_keeps_command_flags() {
+        // Any flags in the configured test command are preserved ahead of the
+        // routing args.
+        let args = build_test_args("flutter test --platform chrome", &["baseline".to_string()]);
+        assert_eq!(args, vec!["test", "--platform", "chrome"]);
     }
 
     #[test]

@@ -92,7 +92,20 @@ pub fn collect_coverage(project_path: &Path, test_command: &str) -> Result<Cover
 
     let program = parts[0];
     let mut args: Vec<String> = parts[1..].iter().map(|s| s.to_string()).collect();
-    args.push("--coverage=coverage".to_string());
+
+    // Coverage collection flags differ between `dart test` and `flutter test`:
+    // - `dart test` accepts `--coverage=<dir>` (writes per-test JSON under
+    //   `coverage/`, consumed by `parse_dart_coverage`).
+    // - `flutter test` has `--coverage` as a plain bool flag plus a separate
+    //   `--coverage-path=<file>` option (default `coverage/lcov.info`, consumed
+    //   by `parse_lcov`). Passing `--coverage=coverage` to `flutter test`
+    //   fails to parse as a boolean.
+    if program == "flutter" {
+        args.push("--coverage".to_string());
+        args.push("--coverage-path=coverage/lcov.info".to_string());
+    } else {
+        args.push("--coverage=coverage".to_string());
+    }
 
     info!(
         "Running baseline: {} {} (in {})",
