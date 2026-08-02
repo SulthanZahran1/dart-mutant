@@ -475,10 +475,10 @@ operators:
 
     #[test]
     fn test_wants_json_detection() {
-        let mut cli = Cli::try_parse_from(["dart_mutant", "--format", "json,html"]).unwrap();
+        let cli = Cli::try_parse_from(["dart_mutant", "--format", "json,html"]).unwrap();
         let config = Config::from_cli(&cli).unwrap();
         assert!(config.wants_json());
         assert!(config.wants_html());
-        assert!(config.wants_console() == false);
+        assert!(!config.wants_console());
     }
 }
