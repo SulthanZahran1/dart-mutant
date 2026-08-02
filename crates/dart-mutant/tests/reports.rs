@@ -26,20 +26,22 @@ use common::{fixture_dir, parse_json_stdout, run_mutant};
 /// entry carries `killed`/`survived`-style status data.
 #[test]
 fn test_stryker_json_valid() {
-    let (output, _stdout) = run_mutant("small", &["--format", "json", "--quiet", "--no-color"]);
+    // Medium (not small): small is deliberately 100% killed, so its Stryker
+    // report has no "Survived" status — the assertion below needs both.
+    let (output, _stdout) = run_mutant("medium", &["--format", "json", "--quiet", "--no-color"]);
     assert_eq!(
         output.status.code(),
         Some(0),
-        "small: expected exit 0; stderr: {}",
+        "medium: expected exit 0; stderr: {}",
         String::from_utf8_lossy(&output.stderr)
     );
 
-    let stryker_path = fixture_dir("small")
+    let stryker_path = fixture_dir("medium")
         .join("mutation-reports")
         .join("mutation-report.json");
     let stryker = fs::read_to_string(&stryker_path).unwrap_or_else(|e| {
         panic!(
-            "small: failed to read Stryker JSON report at {}: {e}",
+            "medium: failed to read Stryker JSON report at {}: {e}",
             stryker_path.display()
         )
     });

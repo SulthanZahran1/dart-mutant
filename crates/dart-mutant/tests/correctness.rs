@@ -71,18 +71,25 @@ fn test_all_six_statuses() {
     let timeout = v["timeout"]
         .as_u64()
         .expect("medium: JSON missing numeric `timeout`");
+    let not_covered = v["notCovered"].as_u64().unwrap_or(0);
 
     assert!(
         killed >= 1,
-        "medium: expected at least 1 KILLED, got {killed}"
+        "medium: expected at least 1 KILLED, got {killed} \
+         (survived={survived} timeout={timeout} notCovered={not_covered}); \
+         full JSON: {stdout}"
     );
     assert!(
         survived >= 1,
-        "medium: expected at least 1 SURVIVED, got {survived}"
+        "medium: expected at least 1 SURVIVED, got {survived} \
+         (killed={killed} timeout={timeout} notCovered={not_covered}); \
+         full JSON: {stdout}"
     );
     assert!(
         timeout >= 1,
-        "medium: expected at least 1 TIMEOUT, got {timeout}"
+        "medium: expected at least 1 TIMEOUT, got {timeout} \
+         (killed={killed} survived={survived} notCovered={not_covered}); \
+         full JSON: {stdout}"
     );
 
     // The three fields that may be zero but MUST exist (be present + numeric).
