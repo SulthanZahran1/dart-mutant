@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>dart_mutant — Mutation Testing for Dart &amp; Flutter | AST-based, Rust, 17 operators</title>
+<title>dart_mutant: Mutation Testing for Dart &amp; Flutter | AST-based, Rust, 17 operators</title>
 <meta name="description" content="dart_mutant is an AST-based mutation testing tool for Dart and Flutter written in Rust. 17 mutation operators including null-safety, cascade, async/await, streams and sealed classes. Coverage routing, TCE equivalent-mutant detection, Stryker JSON, JUnit XML and HTML reports. Install in one command.">
 <meta name="keywords" content="dart mutation testing, dart_mutant, flutter mutation testing, mutation testing dart, mutation test tool, mutation score, MSI, mutant testing, dart testing tools, stryker dart, test quality, code coverage alternative, rust mutation testing, tree-sitter dart, null safety mutation">
 <meta name="author" content="Sulthan Zahran">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://sulthanzahran1.github.io/dart-mutant/">
 <meta property="og:type" content="software">
-<meta property="og:title" content="dart_mutant — Mutation Testing for Dart &amp; Flutter">
+<meta property="og:title" content="dart_mutant: Mutation Testing for Dart &amp; Flutter">
 <meta property="og:description" content="AST-based mutation testing for Dart/Flutter: 17 operators, coverage routing, TCE equivalent detection, Stryker-compatible reports. Find the tests that miss real bugs.">
 <meta property="og:url" content="https://sulthanzahran1.github.io/dart-mutant/">
 <meta property="og:image" content="https://sulthanzahran1.github.io/dart-mutant/og-image.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="dart_mutant — Mutation Testing for Dart &amp; Flutter">
+<meta name="twitter:title" content="dart_mutant: Mutation Testing for Dart &amp; Flutter">
 <meta name="twitter:description" content="AST-based mutation testing for Dart/Flutter: 17 operators, coverage routing, TCE equivalent detection, Stryker-compatible reports.">
 <script type="application/ld+json">
 {
@@ -47,116 +47,547 @@
     "17 mutation operators: 10 generic + 7 Dart-specific (null safety, cascade, async/await, streams, sealed classes)",
     "Coverage routing: runs only tests covering the mutated line",
     "Trivial Compiler Equivalence (TCE) equivalent-mutant detection via Dart kernel bytecode comparison",
-    "Adaptive timeouts (baseline × coefficient)",
+    "Adaptive timeouts (baseline x coefficient)",
     "Parallel execution with Rayon + SHA-256 incremental cache",
     "Stryker-compatible JSON, JUnit XML, HTML reports",
     "Agent-friendly: pure JSON stdout, exit codes 0/1/2"
   ]
 }
 </script>
+<link rel="preload" href="fonts/SpaceGrotesk-2.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="report-hero.png" as="image">
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
-:root { --bg:#1e1e2e; --fg:#cdd6f4; --card:#313244; --border:#585b70; --accent:#89b4fa; --green:#a6e3a1; --yellow:#f9e2af; --red:#f38ba8; }
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--fg); line-height:1.65; padding:2rem 1rem; }
-.container { max-width:900px; margin:0 auto; }
-h1 { font-size:2.2rem; margin-bottom:.5rem; color:#fff; }
-h2 { font-size:1.4rem; margin:2.5rem 0 1rem; color:var(--accent); border-bottom:1px solid var(--border); padding-bottom:.4rem; }
-a { color:var(--accent); }
-code { background:var(--card); padding:.15rem .4rem; border-radius:4px; font-size:.9em; }
-pre { background:var(--card); padding:1rem; border-radius:8px; overflow-x:auto; border:1px solid var(--border); margin:1rem 0; }
-.tagline { font-size:1.15rem; color:#a6adc8; margin-bottom:1.5rem; }
-.badge { display:inline-block; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:.2rem .8rem; margin:.2rem .2rem; font-size:.85rem; }
-.badges { margin:1rem 0 2rem; }
-table { border-collapse:collapse; width:100%; margin:1rem 0; }
-th,td { border:1px solid var(--border); padding:.5rem .8rem; text-align:left; font-size:.95rem; }
-th { background:var(--card); }
-.green { color:var(--green); } .yellow { color:var(--yellow); } .red { color:var(--red); }
-.btn { display:inline-block; background:var(--accent); color:#11111b; font-weight:600; padding:.6rem 1.4rem; border-radius:8px; text-decoration:none; margin:.3rem .3rem 0 0; }
-.btn.secondary { background:var(--card); color:var(--fg); border:1px solid var(--border); }
-footer { margin-top:3rem; color:#6c7086; font-size:.85rem; border-top:1px solid var(--border); padding-top:1rem; }
+/* ------------------------------------------------------------------ */
+/* Tokens. One theme family, two modes. Single accent: teal.           */
+/* ------------------------------------------------------------------ */
+:root {
+  --bg: #0b0e14;
+  --bg-elev: #11151f;
+  --bg-code: #0e1219;
+  --ink: #e6eaf2;
+  --ink-dim: #9aa4b5;
+  --ink-faint: #6b7688;
+  --line: #1e2532;
+  --line-strong: #2a3345;
+  --accent: #2dd4bf;
+  --accent-ink: #052e2a;
+  --radius: 12px;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* semantic status colors, used only in the status section */
+  --st-killed: #34d399;
+  --st-survived: #f87171;
+  --st-timeout: #fbbf24;
+  --st-equivalent: #94a3b8;
+  --st-notcovered: #60a5fa;
+  --st-compile: #a78bfa;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f7f9;
+    --bg-elev: #ffffff;
+    --bg-code: #f0f2f5;
+    --ink: #101418;
+    --ink-dim: #4b5563;
+    --ink-faint: #6b7280;
+    --line: #e2e6ec;
+    --line-strong: #cfd6df;
+    --accent: #0d9488;
+    --accent-ink: #ffffff;
+    --st-killed: #059669;
+    --st-survived: #dc2626;
+    --st-timeout: #d97706;
+    --st-equivalent: #64748b;
+    --st-notcovered: #2563eb;
+    --st-compile: #7c3aed;
+  }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-display);
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, pre, .mono { font-family: var(--font-mono); }
+pre {
+  background: var(--bg-code);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  overflow-x: auto;
+  font-size: 0.86rem;
+  line-height: 1.7;
+  color: var(--ink);
+}
+.container { max-width: 1180px; margin: 0 auto; padding: 0 1.5rem; }
+section { padding: 5.5rem 0; }
+section + section { border-top: 1px solid var(--line); }
+
+/* ------------------------------------------------------------------ */
+/* Reveal on scroll (IntersectionObserver; reduced-motion safe)        */
+/* ------------------------------------------------------------------ */
+.reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.55s cubic-bezier(0.16,1,0.3,1), transform 0.55s cubic-bezier(0.16,1,0.3,1); }
+.reveal.is-in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Nav. One line, max 72px.                                            */
+/* ------------------------------------------------------------------ */
+nav {
+  position: sticky; top: 0; z-index: 50;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+  height: 64px;
+  display: flex; align-items: center;
+}
+@media (prefers-reduced-transparency: reduce) { nav { background: var(--bg); } }
+.nav-inner { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.nav-brand { font-weight: 700; font-size: 1.05rem; color: var(--ink); letter-spacing: -0.01em; }
+.nav-brand:hover { text-decoration: none; }
+.nav-brand .dot { color: var(--accent); }
+.nav-links { display: flex; gap: 1.75rem; font-size: 0.92rem; }
+.nav-links a { color: var(--ink-dim); font-weight: 500; }
+.nav-links a:hover { color: var(--ink); text-decoration: none; }
+@media (max-width: 768px) { .nav-links { display: none; } }
+
+/* ------------------------------------------------------------------ */
+/* Hero. Asymmetric split: text left, real report screenshot right.    */
+/* Max 4 text elements. No badges, no taglines under CTAs.             */
+/* ------------------------------------------------------------------ */
+.hero {
+  padding: 5.5rem 0 4.5rem;
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(1200px 500px at 85% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    var(--bg);
+}
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 3.5rem;
+  align-items: center;
+}
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+  .hero { padding-top: 3.5rem; }
+}
+.hero h1 {
+  font-size: clamp(2.1rem, 4.6vw, 3.4rem);
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  margin-bottom: 1.1rem;
+}
+.hero h1 .accent { color: var(--accent); }
+.hero p.lead {
+  font-size: 1.08rem;
+  color: var(--ink-dim);
+  max-width: 46ch;
+  margin-bottom: 1.9rem;
+}
+.hero-ctas { display: flex; gap: 0.85rem; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.72rem 1.45rem;
+  border-radius: 999px;
+  font-weight: 600; font-size: 0.95rem;
+  border: 1px solid transparent;
+  transition: transform 0.18s cubic-bezier(0.16,1,0.3,1), box-shadow 0.18s;
+  white-space: nowrap;
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); }
+.btn-primary:hover { text-decoration: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); transform: translateY(-1px); }
+.btn-ghost { border-color: var(--line-strong); color: var(--ink); background: transparent; }
+.btn-ghost:hover { text-decoration: none; border-color: var(--accent); transform: translateY(-1px); }
+.hero-figure {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 24px 70px -30px color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--bg-elev);
+}
+.hero-figure img { display: block; width: 100%; height: auto; }
+.hero-figure figcaption {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  padding: 0.55rem 0.9rem;
+  border-top: 1px solid var(--line);
+  letter-spacing: 0.02em;
+}
+
+/* ------------------------------------------------------------------ */
+/* Section heads. Vertical stack, no split-header, restrained eyebrows */
+/* ------------------------------------------------------------------ */
+h2 {
+  font-size: clamp(1.5rem, 3vw, 2.1rem);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  margin-bottom: 0.9rem;
+}
+.section-intro { color: var(--ink-dim); max-width: 58ch; margin-bottom: 2.4rem; }
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.8rem;
+  display: block;
+}
+
+/* ------------------------------------------------------------------ */
+/* Install: single-column, code block.                                */
+/* ------------------------------------------------------------------ */
+.install-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2.5rem; align-items: start; }
+@media (max-width: 900px) { .install-grid { grid-template-columns: 1fr; } }
+.install-alt { color: var(--ink-dim); font-size: 0.95rem; }
+.install-alt p { margin-bottom: 0.9rem; }
+.install-alt ul { list-style: none; }
+.install-alt li { padding: 0.45rem 0; border-bottom: 1px solid var(--line); }
+.install-alt li:last-child { border-bottom: none; }
+
+/* ------------------------------------------------------------------ */
+/* Why: two-column text + 3 grouped points, no cards.                 */
+/* ------------------------------------------------------------------ */
+.why-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; }
+@media (max-width: 768px) { .why-grid { grid-template-columns: 1fr; } }
+.why-points { list-style: none; display: grid; gap: 1.1rem; }
+.why-points li { border-left: 2px solid var(--line-strong); padding-left: 1.1rem; }
+.why-points li strong { display: block; margin-bottom: 0.15rem; }
+.why-points li span { color: var(--ink-dim); font-size: 0.94rem; }
+
+/* ------------------------------------------------------------------ */
+/* Operators: asymmetric 2-col. Generic grouped, Dart-specific accent. */
+/* ------------------------------------------------------------------ */
+.op-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; }
+@media (max-width: 768px) { .op-grid { grid-template-columns: 1fr; } }
+.op-generic h3, .op-dart h3 { font-size: 1.05rem; margin-bottom: 1rem; }
+.op-generic {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.6rem;
+}
+.op-generic ul { list-style: none; columns: 2; column-gap: 1.5rem; }
+@media (max-width: 480px) { .op-generic ul { columns: 1; } }
+.op-generic li { padding: 0.42rem 0; font-size: 0.92rem; color: var(--ink-dim); break-inside: avoid; }
+.op-generic li b { color: var(--ink); font-weight: 600; font-family: var(--font-mono); font-size: 0.85rem; }
+.op-dart {
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  border-radius: var(--radius);
+  padding: 1.5rem 1.6rem;
+  background: color-mix(in srgb, var(--accent) 5%, var(--bg-elev));
+}
+.op-dart ul { list-style: none; }
+.op-dart li { padding: 0.5rem 0; font-size: 0.94rem; }
+.op-dart li b { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); margin-right: 0.55rem; }
+.op-note { margin-top: 1.1rem; font-size: 0.82rem; color: var(--ink-faint); }
+
+/* ------------------------------------------------------------------ */
+/* Quick start: code + grouped flags.                                 */
+/* ------------------------------------------------------------------ */
+.qs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: start; }
+@media (max-width: 900px) { .qs-grid { grid-template-columns: 1fr; } }
+.qs-flags { list-style: none; }
+.qs-flags li { padding: 0.6rem 0; border-bottom: 1px solid var(--line); }
+.qs-flags li:last-child { border-bottom: none; }
+.qs-flags code { font-size: 0.82rem; color: var(--accent); }
+
+/* ------------------------------------------------------------------ */
+/* Statuses: 2-col grid, semantic color indicators only.              */
+/* ------------------------------------------------------------------ */
+.status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 2.5rem; }
+@media (max-width: 640px) { .status-grid { grid-template-columns: 1fr; } }
+.status-item { display: grid; grid-template-columns: 10px 1fr; gap: 0.9rem; align-items: baseline; }
+.status-item .swatch { width: 8px; height: 8px; border-radius: 2px; margin-top: 0.65em; }
+.status-item b { font-size: 0.95rem; }
+.status-item p { color: var(--ink-dim); font-size: 0.9rem; margin-top: 0.1rem; }
+.st-killed { background: var(--st-killed); }
+.st-survived { background: var(--st-survived); }
+.st-timeout { background: var(--st-timeout); }
+.st-equivalent { background: var(--st-equivalent); }
+.st-notcovered { background: var(--st-notcovered); }
+.st-compile { background: var(--st-compile); }
+
+/* ------------------------------------------------------------------ */
+/* Performance: plain stat row, no cards.                             */
+/* ------------------------------------------------------------------ */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
+@media (max-width: 768px) { .stats { grid-template-columns: 1fr; gap: 1.6rem; } }
+.stat { border-top: 1px solid var(--line-strong); padding-top: 1.1rem; }
+.stat .num { font-family: var(--font-mono); font-size: 2rem; font-weight: 600; color: var(--accent); letter-spacing: -0.02em; }
+.stat .lbl { color: var(--ink-dim); font-size: 0.9rem; margin-top: 0.3rem; }
+
+/* ------------------------------------------------------------------ */
+/* Reports: 2x2 grid with Tabler icons (allowed icon family).         */
+/* ------------------------------------------------------------------ */
+.report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; }
+@media (max-width: 640px) { .report-grid { grid-template-columns: 1fr; } }
+.report-item {
+  display: flex; gap: 1rem; align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.35rem;
+  background: var(--bg-elev);
+}
+.report-item svg { flex: 0 0 auto; color: var(--accent); margin-top: 0.2rem; }
+.report-item b { display: block; margin-bottom: 0.2rem; }
+.report-item p { color: var(--ink-dim); font-size: 0.9rem; }
+
+/* ------------------------------------------------------------------ */
+/* CTA band + footer.                                                 */
+/* ------------------------------------------------------------------ */
+.cta-band {
+  text-align: left;
+  border-top: 1px solid var(--line);
+  background:
+    radial-gradient(900px 320px at 15% 0%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%),
+    var(--bg);
+}
+.cta-band h2 { max-width: 22ch; }
+footer {
+  border-top: 1px solid var(--line);
+  padding: 2.2rem 0 3rem;
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+}
+.footer-inner { display: flex; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap; }
+.footer-inner a { color: var(--ink-dim); }
+@media (max-width: 640px) { section { padding: 3.5rem 0; } }
+@media (max-width: 420px) {
+  .hero-ctas { flex-direction: column; align-items: stretch; }
+  .hero-ctas .btn { justify-content: center; }
+}
 </style>
 </head>
 <body>
-<div class="container">
-<h1>dart_mutant 🧬</h1>
-<div class="tagline">AST-based <strong>mutation testing for Dart and Flutter</strong>, written in Rust. Inject bugs into your code, run your tests, and find the gaps line coverage can't see.</div>
-<div class="badges">
-<span class="badge">17 operators</span><span class="badge">Null-safety mutations</span><span class="badge">Cascade mutations</span><span class="badge">Async/await mutations</span><span class="badge">Coverage routing</span><span class="badge">TCE equivalent detection</span><span class="badge">Stryker JSON</span><span class="badge">Rust</span><span class="badge">tree-sitter</span><span class="badge">MIT</span>
-</div>
-<a class="btn" href="https://github.com/SulthanZahran1/dart-mutant">GitHub</a>
-<a class="btn secondary" href="https://github.com/SulthanZahran1/dart-mutant/releases">Releases</a>
-<a class="btn secondary" href="#install">Install</a>
 
-<h2 id="install">Install in one command</h2>
-<pre>curl -fsSL https://raw.githubusercontent.com/SulthanZahran1/dart-mutant/main/scripts/install.sh | bash</pre>
-<p>Or via Homebrew: <code>brew install SulthanZahran1/tap/dart_mutant</code> &nbsp;·&nbsp; Pre-built binaries for Linux (static musl), macOS (Intel + Apple Silicon), Windows on <a href="https://github.com/SulthanZahran1/dart-mutant/releases">GitHub Releases</a>.</p>
+<nav>
+  <div class="container nav-inner">
+    <a class="nav-brand" href="#">dart<span class="dot">_</span>mutant</a>
+    <div class="nav-links">
+      <a href="#install">Install</a>
+      <a href="#operators">Operators</a>
+      <a href="#quickstart">Quick start</a>
+      <a href="#statuses">Statuses</a>
+      <a href="#performance">Performance</a>
+      <a href="#reports">Reports</a>
+    </div>
+  </div>
+</nav>
 
-<h2>Why mutation testing?</h2>
-<p>Code coverage tells you what code <em>runs</em> during tests. Mutation testing tells you what your tests actually <em>verify</em>. A line can be 100% covered and still harbor a bug your tests would never catch. dart_mutant systematically injects small, deliberate faults (mutants) and runs your tests against each one — a mutant that <strong>survives</strong> is a test gap.</p>
+<header class="hero">
+  <div class="container hero-grid">
+    <div>
+      <h1>Mutation testing for <span class="accent">Dart &amp; Flutter</span></h1>
+      <p class="lead">Injects deliberate faults into your Dart code and runs your tests against each one. Survivors are gaps coverage can't see.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="#install">Install</a>
+        <a class="btn btn-ghost" href="https://github.com/SulthanZahran1/dart-mutant">View on GitHub</a>
+      </div>
+    </div>
+    <figure class="hero-figure reveal">
+      <img src="report-hero.png" alt="dart_mutant report: mutation score 100 percent, 25 killed, 0 survived, with per-status color key" width="1280" height="389">
+      <figcaption>mutation-report.html · 25 mutants · MSI 100.0%</figcaption>
+    </figure>
+  </div>
+</header>
 
-<h2>Quick start</h2>
-<pre>cd my-dart-project
+<section id="install">
+  <div class="container install-grid">
+    <div>
+      <span class="eyebrow">Install</span>
+      <h2>One command, any OS</h2>
+      <p class="section-intro">Auto-detects platform, downloads a static binary, installs to ~/.local/bin.</p>
+      <pre>curl -fsSL https://raw.githubusercontent.com/SulthanZahran1/dart-mutant/main/scripts/install.sh | bash</pre>
+    </div>
+    <div class="install-alt">
+      <p>Other channels:</p>
+      <ul>
+        <li><b>Homebrew</b> · <code>brew install SulthanZahran1/tap/dart_mutant</code></li>
+        <li><b>Releases</b> · Linux (static musl), macOS Intel + Apple Silicon, Windows</li>
+        <li><b>Prerequisite</b> · Dart SDK 3.0+ on PATH, Flutter SDK for <code>flutter test</code></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="why">
+  <div class="container why-grid">
+    <div>
+      <h2>Coverage tells you what runs. Mutation tells you what's verified.</h2>
+      <p class="section-intro">A line can be 100% covered and still hold a bug your tests would never catch. Mutation testing finds the assertions that actually do work.</p>
+    </div>
+    <ul class="why-points">
+      <li><strong>Dart-native operators</strong><span>Null safety, cascades, async/await, streams and sealed classes. The constructs that make Dart unique.</span></li>
+      <li><strong>AST-level, not regex</strong><span>Parsed with tree-sitter, so mutations are syntactically valid and never touch comments or strings.</span></li>
+      <li><strong>Built for CI</strong><span>Pure JSON stdout, exit codes 0/1/2, threshold gates. Agents and pipelines can consume it directly.</span></li>
+    </ul>
+  </div>
+</section>
+
+<section id="operators">
+  <div class="container">
+    <span class="eyebrow">Operators</span>
+    <h2>17 mutation operators</h2>
+    <p class="section-intro">10 generic, plus 7 that only exist for Dart. Restrict with <code>--operators</code> or <code>.dart_mutant.yml</code>.</p>
+    <div class="op-grid">
+      <div class="op-generic">
+        <h3>Generic</h3>
+        <ul>
+          <li><b>AOR</b> · arithmetic replacement</li>
+          <li><b>AOD</b> · arithmetic deletion</li>
+          <li><b>AOI</b> · arithmetic insertion</li>
+          <li><b>ROR</b> · relational replacement</li>
+          <li><b>LOR</b> · logical replacement</li>
+          <li><b>LCR</b> · logical connector</li>
+          <li><b>COR</b> · conditional replacement</li>
+          <li><b>SDL</b> · statement deletion</li>
+          <li><b>RVR</b> · return value replacement</li>
+          <li><b>INC</b> · loop counter inc/dec</li>
+        </ul>
+      </div>
+      <div class="op-dart">
+        <h3>Dart-specific</h3>
+        <ul>
+          <li><b>NullSafety</b> · remove <code>??</code> fallbacks</li>
+          <li><b>NullAssert</b> · remove <code>!</code> assertions</li>
+          <li><b>OptionalChaining</b> · <code>?.</code> to <code>.</code></li>
+          <li><b>Cascade</b> · <code>..</code> to <code>.</code></li>
+          <li><b>AsyncAwait</b> · remove <code>await</code></li>
+          <li><b>StreamMutation</b> · stream operator changes</li>
+          <li><b>SealedExhaustiveness</b> · switch exhaustiveness</li>
+        </ul>
+        <p class="op-note">The constructs that make Dart unique, and that generic tools miss.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="quickstart">
+  <div class="container qs-grid">
+    <div>
+      <h2>Run it like this</h2>
+      <pre>cd my-dart-project
 dart_mutant                          # auto-detect, run everything
 dart_mutant --threshold 80           # CI gate: exit 0 if MSI ≥ 80
-dart_mutant --format json --quiet    # pure JSON for CI dashboards & AI agents
-dart_mutant --detect-equivalent      # TCE equivalent-mutant detection
-dart_mutant --mutant 42              # re-run one mutant after writing a killing test</pre>
+dart_mutant --format json --quiet    # pure JSON for agents
+dart_mutant --detect-equivalent      # TCE equivalent detection
+dart_mutant --mutant 42              # re-run one mutant</pre>
+    </div>
+    <ul class="qs-flags">
+      <li><code>--path</code> · project root, defaults to current dir</li>
+      <li><code>--parallel</code> · worker count, defaults to CPU cores</li>
+      <li><code>--format</code> · console, json, html, junit</li>
+      <li><code>--sample N</code> · quick feedback on a subset</li>
+      <li><code>--incremental --base-ref main</code> · only changed files</li>
+      <li><code>--exclude "*.g.dart,*.freezed.dart"</code> · skip generated</li>
+    </ul>
+  </div>
+</section>
 
-<h2>Mutation operators</h2>
-<table>
-<tr><th>Category</th><th>Operators</th><th>Examples</th></tr>
-<tr><td>Arithmetic</td><td>AOR, AOD, AOI</td><td><code>+</code>→<code>-</code>, <code>a + b</code>→<code>a</code>, <code>a</code>→<code>a + 1</code></td></tr>
-<tr><td>Relational</td><td>ROR</td><td><code>&gt;</code>→<code>&gt;=</code>, <code>==</code>→<code>!=</code></td></tr>
-<tr><td>Logical</td><td>LOR, LCR, COR</td><td><code>&amp;&amp;</code>→<code>||</code>, negation</td></tr>
-<tr><td>Statement</td><td>SDL</td><td>delete statement</td></tr>
-<tr><td>Return / Loop</td><td>RVR, INC/DEC</td><td><code>return x</code>→<code>return null</code>, loop counters</td></tr>
-<tr><td><strong>Null safety</strong> 🎯</td><td>NullSafety, NullAssert, OptionalChaining</td><td><code>??</code> removal, <code>!</code> removal, <code>?.</code>→<code>.</code></td></tr>
-<tr><td><strong>Cascade</strong> 🎯</td><td>Cascade</td><td><code>..</code>→<code>.</code></td></tr>
-<tr><td><strong>Async/await</strong> 🎯</td><td>AsyncAwait</td><td>remove <code>await</code></td></tr>
-<tr><td><strong>Streams</strong> 🎯</td><td>StreamMutation</td><td>stream operator changes</td></tr>
-<tr><td><strong>Sealed classes</strong> 🎯</td><td>SealedExhaustiveness</td><td>switch exhaustiveness</td></tr>
-</table>
-<p>🎯 = Dart-specific — these are the constructs that make Dart unique and that generic mutation tools miss.</p>
+<section id="statuses">
+  <div class="container">
+    Six outcomes, each with a fix</h2>
+    <p class="section-intro">Every mutant is classified, and each status points to a concrete next step.</p>
+    <div class="status-grid">
+      <div class="status-item"><span class="swatch st-killed"></span><div><b>KILLED</b><p>Tests caught the mutation. Nothing to do.</p></div></div>
+      <div class="status-item"><span class="swatch st-survived"></span><div><b>SURVIVED</b><p>Tests missed it. Write a test that fails under the mutation.</p></div></div>
+      <div class="status-item"><span class="swatch st-timeout"></span><div><b>TIMEOUT</b><p>Mutation caused a hang. Add boundary-input tests for loops.</p></div></div>
+      <div class="status-item"><span class="swatch st-equivalent"></span><div><b>EQUIVALENT</b><p>Bytecode-identical, unkillable. Excluded from the score.</p></div></div>
+      <div class="status-item"><span class="swatch st-notcovered"></span><div><b>NOT_COVERED</b><p>No test reaches the line. Add coverage first.</p></div></div>
+      <div class="status-item"><span class="swatch st-compile"></span><div><b>COMPILE_ERROR</b><p>Invalid Dart produced. Should stay under 2%.</p></div></div>
+    </div>
+  </div>
+</section>
 
-<h2>Interpreting results</h2>
-<table>
-<tr><th>Status</th><th>Meaning</th><th>Action</th></tr>
-<tr><td class="green">KILLED</td><td>tests caught the mutation</td><td>nothing</td></tr>
-<tr><td class="red">SURVIVED</td><td>tests missed it</td><td>write a test that fails under the mutation</td></tr>
-<tr><td class="yellow">TIMEOUT</td><td>mutation caused a hang</td><td>boundary-input tests for loops</td></tr>
-<tr><td>EQUIVALENT</td><td>bytecode-identical, unkillable</td><td>excluded from score</td></tr>
-<tr><td>NOT_COVERED</td><td>no test reaches the line</td><td>add coverage</td></tr>
-<tr><td>COMPILE_ERROR</td><td>invalid Dart produced</td><td>&lt;2% expected</td></tr>
-</table>
+<section id="performance">
+  <div class="container">
+    Engineered to scale</h2>
+    <div class="stats">
+      <div class="stat"><div class="num">17</div><div class="lbl">operators across 10 generic and 7 Dart-specific families</div></div>
+      <div class="stat"><div class="num">1x</div><div class="lbl">compile via schemata: mutations switched by DART_MUTANT_ID</div></div>
+      <div class="stat"><div class="num">&lt;2%</div><div class="lbl">compile-error rate target, verified against a live fixture</div></div>
+    </div>
+  </div>
+</section>
 
-<h2>Performance engineering</h2>
-<ul>
-<li><strong>Coverage routing</strong> — only test files covering the mutated line run per mutant</li>
-<li><strong>Schemata</strong> — mutations injected via <code>DART_MUTANT_ID</code> env switch, compile once</li>
-<li><strong>Parallel</strong> — Rayon across CPU cores, per-file grouping avoids contention</li>
-<li><strong>Adaptive timeout</strong> — baseline duration × 3, bounded 5s–5min</li>
-<li><strong>Incremental cache</strong> — SHA-256 content-addressed, warm reruns in seconds</li>
-</ul>
+<section id="reports">
+  <div class="container">
+    <span class="eyebrow">Reports</span>
+    <h2>Four formats, one run</h2>
+    <div class="report-grid">
+      <div class="report-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <div><b>HTML report</b><p>Self-contained dark-theme heatmap with per-file MSI.</p></div>
+      </div>
+      <div class="report-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        <div><b>Stryker JSON</b><p>mutation-testing-elements schema v2. Dashboard-ready.</p></div>
+      </div>
+      <div class="report-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12v-2a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v2"/><path d="M3 12h5l2 3h4l2-3h5"/></svg>
+        <div><b>JUnit XML</b><p>Drop into any CI test dashboard.</p></div>
+      </div>
+      <div class="report-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17l6-6-6-6"/><path d="M12 19h8"/></svg>
+        <div><b>Console summary</b><p>MSI, killed, survived, timeout at a glance.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-<h2>Reports</h2>
-<ul>
-<li>Stryker-compatible JSON (mutation-testing-elements schema v2)</li>
-<li>JUnit XML for CI dashboards</li>
-<li>Self-contained HTML report with per-file heatmap</li>
-<li>Console summary with MSI breakdown</li>
-</ul>
-
-<h2>Resources</h2>
-<ul>
-<li><a href="https://github.com/SulthanZahran1/dart-mutant">GitHub repository</a></li>
-<li><a href="https://github.com/SulthanZahran1/dart-mutant/blob/main/README.md">README — full docs</a></li>
-<li><a href="https://github.com/SulthanZahran1/dart-mutant/releases">Releases &amp; binaries</a></li>
-<li><a href="https://github.com/SulthanZahran1/dart-mutant/blob/main/llms.txt">llms.txt — agent-friendly summary</a></li>
-</ul>
+<section class="cta-band">
+  <div class="container">
+    <h2>Find the tests that miss real bugs.</h2>
+    <p class="section-intro">MIT licensed, single binary, zero services. The report in the hero is a real run against a real Dart fixture.</p>
+    <div class="hero-ctas">
+      <a class="btn btn-primary" href="https://github.com/SulthanZahran1/dart-mutant">Star on GitHub</a>
+      <a class="btn btn-ghost" href="https://github.com/SulthanZahran1/dart-mutant/releases">Download binary</a>
+    </div>
+  </div>
+</section>
 
 <footer>
-<p>dart_mutant is an open-source (MIT) project. Built with Rust + tree-sitter. Report issues on <a href="https://github.com/SulthanZahran1/dart-mutant/issues">GitHub Issues</a>.</p>
+  <div class="container footer-inner">
+    <span>dart_mutant · MIT License · built with Rust + tree-sitter</span>
+    <span>
+      <a href="https://github.com/SulthanZahran1/dart-mutant">GitHub</a> ·
+      <a href="https://github.com/SulthanZahran1/dart-mutant/blob/main/README.md">Docs</a> ·
+      <a href="https://github.com/SulthanZahran1/dart-mutant/issues">Issues</a>
+    </span>
+  </div>
 </footer>
-</div>
+
+<script>
+// Scroll reveal via IntersectionObserver. No scroll listeners.
+(function () {
+  var els = document.querySelectorAll('.reveal');
+  if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    els.forEach(function (el) { el.classList.add('is-in'); });
+    return;
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+    });
+  }, { threshold: 0.18 });
+  els.forEach(function (el) { io.observe(el); });
+})();
+</script>
 </body>
 </html>
