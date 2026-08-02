@@ -177,7 +177,13 @@ fn scan_source_files(
         }
 
         if let Ok(source) = std::fs::read_to_string(path) {
-            files.push((path.to_path_buf(), source));
+            // Store the RELATIVE path (project-root-relative) as the file
+            // identity. Coverage JSON sources are `file:///...` URIs that
+            // share the same suffix as the relative path (`lib/x.dart`), so
+            // suffix matching works on every platform. Absolute paths break
+            // this on Windows: the canonical form is the verbatim `\\?\D:\...`
+            // prefix, which never appears in the coverage URI (`file:///D:/...`).
+            files.push((PathBuf::from(&rel), source));
         }
     }
 
