@@ -1,0 +1,10 @@
+# Small fixture — one operator per construct type keeps the mutant count
+# in the 12–15 range (per GOAL-1.0.md criterion 1). Full operator sets are
+# exercised by the medium and large fixtures.
+operators:
+  - AOR
+  - ROR
+  - LOR
+  - NullSafety
+  - Cascade
+  - AsyncAwait

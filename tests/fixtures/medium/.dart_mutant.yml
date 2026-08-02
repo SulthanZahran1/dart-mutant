@@ -1,0 +1,15 @@
+# Medium fixture — 7 operators (RVR/AOI/AOD/LOR/LCR/Stream/OptionalChaining
+# excluded to keep the compile-error rate low and the mutant count in the
+# 50-80 contract range; Dart-specific coverage comes from small + flutter).
+# The INC mutant on the for-loop in calculator.dart produces the TIMEOUT;
+# several ROR/Cascade/AsyncAwait mutants survive by design (tests don't
+# assert on those paths).
+operators:
+  - AOR
+  - ROR
+  - COR
+  - SDL
+  - INC
+  - NullSafety
+  - Cascade
+  - AsyncAwait
