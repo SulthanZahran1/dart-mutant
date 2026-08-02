@@ -72,12 +72,13 @@ fn test_all_six_statuses() {
         .as_u64()
         .expect("medium: JSON missing numeric `timeout`");
     let not_covered = v["notCovered"].as_u64().unwrap_or(0);
+    let stderr = String::from_utf8_lossy(&output.stderr);
 
     assert!(
         killed >= 1,
         "medium: expected at least 1 KILLED, got {killed} \
          (survived={survived} timeout={timeout} notCovered={not_covered}); \
-         full JSON: {stdout}"
+         full JSON: {stdout}\nstderr: {stderr}"
     );
     assert!(
         survived >= 1,

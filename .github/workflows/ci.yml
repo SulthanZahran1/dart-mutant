@@ -69,6 +69,8 @@ jobs:
 
       - name: Test (unit + integration, serial)
         run: cargo test --workspace -- --test-threads=1
+        env:
+          RUST_LOG: debug
 
   # GOAL-1.0 criterion 5: Flutter execution path against the real Flutter SDK.
   flutter:
