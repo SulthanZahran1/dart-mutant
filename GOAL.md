@@ -2,7 +2,7 @@
 
 > **Status:** live spec — in flight, not yet implemented.
 
-Build an AST-based mutation testing tool for Dart that compiles once via mutant schemata, routes each mutant only to covering tests, classifies all 6 mutant states including equivalent-mutant detection via Dart kernel/bytecode comparison, produces Stryker-compatible JSON + JUnit XML + HTML reports, implements ≥6 Dart-specific operators (null safety, cascade, async/await, streams, sealed classes), and completes a 500-mutant cold run in under 10 minutes with a <2% compilation failure rate.
+Build an AST-based mutation testing tool for Dart that compiles once via mutant schemata, routes each mutant only to covering tests, classifies all 6 mutant states including equivalent-mutant detection via Dart kernel/bytecode comparison, produces Stryker-compatible JSON + JUnit XML + HTML reports, implements ≥6 Dart-specific operators (null safety, cascade, async/await, streams, sealed classes), completes a 500-mutant cold run in under 10 minutes with a <2% compilation failure rate, and is installable in ≤1 command with machine-readable JSON output for AI agent integration.
 
 ---
 
@@ -106,5 +106,29 @@ Every mutant gets classified into exactly one of:
 
 **Timeout mechanism:** Adaptive per-mutant timeout based on baseline test duration × multiplier (not a fixed global timeout).
 
-**Test:** Introduce an infinite-loop mutant (`i++` → `i--` in a for loop).
-**Pass:** Classified as TIMEOUT within `baseline × 3` seconds, not hung indefinitely.
+### 7. Installation & Agent Integration
+
+The tool must be installable in ≤1 command with zero manual steps, and usable programmatically by AI agents without parsing human-readable console output.
+
+**Distribution channels:**
+
+| Channel | Command | Verifiable |
+|---|---|---|
+| Homebrew | `brew install SulthanZahran1/tap/dart_mutant` | `dart_mutant --version` exits 0 |
+| Pre-built binary (curl) | `curl -fsSL .../install.sh \| bash` | Auto-detects OS+arch, installs binary, verifies |
+| Cargo | `cargo install dart-mutant` | Compiles from source, exits 0 |
+| GitHub Release | Manual download of `.tar.gz` / `.zip` | Binary runs without Rust toolchain |
+
+**Agent-friendly features:**
+
+| Feature | Purpose | Verifiable |
+|---|---|---|
+| `--format json` | Machine-readable output | Valid JSON schema with `mutationScore`, `killed`, `survived`, `files[]` |
+| `--quiet` | No progress bars, no color codes | Stdout is pure JSON (or empty) |
+| `--no-color` | Disable ANSI escape codes | No `\x1b` bytes in stdout |
+| `--mutant <id>` | Re-run a single mutant | Only that mutant is tested, JSON output |
+| Exit codes | CI gate | 0=pass, 1=below threshold, 2=error |
+| `install.sh` script | One-shot agent install | Detects OS, downloads binary, verifies, exits 0 or non-zero |
+
+**Test:** Run `curl -fsSL .../install.sh | bash` on Linux x86_64, macOS arm64, and macOS x86_64. Then run `dart_mutant --format json --quiet` against a fixture project.
+**Pass:** Binary installed in ≤1 command. JSON output is valid and parseable. Exit code correct for threshold gate.

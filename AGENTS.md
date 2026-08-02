@@ -209,6 +209,322 @@ operators:                         # restrict operators (default: all)
 
 ---
 
+## Installation
+
+### For users
+
+#### Homebrew (macOS / Linux)
+
+```bash
+brew install SulthanZahran1/tap/dart_mutant
+```
+
+#### Pre-built binary (Linux / macOS / Windows)
+
+```bash
+# Linux (x86_64)
+curl -L https://github.com/SulthanZahran1/dart-mutant/releases/latest/download/dart_mutant-x86_64-unknown-linux-gnu.tar.gz | tar xz
+sudo mv dart_mutant /usr/local/bin/
+
+# macOS (Apple Silicon)
+curl -L https://github.com/SulthanZahran1/dart-mutant/releases/latest/download/dart_mutant-aarch64-apple-darwin.tar.gz | tar xz
+sudo mv dart_mutant /usr/local/bin/
+
+# macOS (Intel)
+curl -L https://github.com/SulthanZahran1/dart-mutant/releases/latest/download/dart_mutant-x86_64-apple-darwin.tar.gz | tar xz
+sudo mv dart_mutant /usr/local/bin/
+
+# Windows (PowerShell)
+curl -L https://github.com/SulthanZahran1/dart-mutant/releases/latest/download/dart_mutant-x86_64-pc-windows-msvc.zip -o dart_mutant.zip
+Expand-Archive dart_mutant.zip -DestinationPath C:\Program Files\dart_mutant
+# Add C:\Program Files\dart_mutant to your PATH
+```
+
+#### Cargo (from source)
+
+```bash
+cargo install dart-mutant
+```
+
+#### Verify installation
+
+```bash
+dart_mutant --version
+dart_mutant --help
+```
+
+#### Prerequisites
+
+- **Dart SDK 3.0+** on `PATH` (`dart --version`). dart_mutant shells out to `dart test` (or `flutter test`) to run your test suite.
+- **Flutter SDK** if your project uses `flutter test` instead of `dart test`.
+- **git** if using `--incremental` mode (reads `git diff` to scope mutations to changed lines).
+- No Rust toolchain required — the binary is statically linked (musl on Linux).
+
+### For AI agents
+
+AI agents (Claude Code, Codex, Cursor, Hermes, etc.) typically install dev tools as a one-shot shell command during session setup. The fastest path:
+
+#### One-shot install (auto-detect platform)
+
+```bash
+# Detects OS + arch, downloads the right binary, installs to /usr/local/bin
+curl -fsSL https://raw.githubusercontent.com/SulthanZahran1/dart-mutant/main/scripts/install.sh | bash
+```
+
+This script:
+1. Detects OS (`linux` / `macos` / `windows`) and architecture (`x86_64` / `aarch64`)
+2. Downloads the matching pre-built binary from GitHub Releases
+3. Installs to `/usr/local/bin/dart_mutant` (or `$HOME/.local/bin` if no sudo)
+4. Verifies with `dart_mutant --version`
+5. Exits 0 on success, non-zero on failure
+
+#### Install via Cargo (if Rust toolchain is available)
+
+```bash
+cargo install dart-mutant 2>&1 | tail -1
+```
+
+#### Programmatic usage from an agent
+
+Agents should use `--format json` for machine-readable output and parse the JSON for mutation scores, survivor counts, and per-file breakdowns:
+
+```bash
+# Run mutation testing, get JSON output
+dart_mutant --path ./my-dart-project --format json --quiet --threshold 80
+
+# JSON output schema (stdout):
+{
+  "mutationScore": 72.5,
+  "mutationCoverage": 85.0,
+  "total": 500,
+  "killed": 310,
+  "survived": 118,
+  "timeout": 12,
+  "equivalent": 30,
+  "notCovered": 25,
+  "compileError": 5,
+  "threshold": 80,
+  "passed": false,
+  "files": [
+    {
+      "path": "lib/src/math_utils.dart",
+      "mutationScore": 90.0,
+      "killed": 18,
+      "survived": 2,
+      "total": 20
+    }
+  ]
+}
+```
+
+```bash
+# Agent-friendly: JSON only, no color, no progress bars
+dart_mutant --path ./my-dart-project --format json --quiet --no-color
+
+# Check exit code for CI gate
+echo $?  # 0 = MSI ≥ threshold, 1 = below threshold, 2 = error
+```
+
+#### Agent workflow: "find weak tests and fix them"
+
+```bash
+# Step 1: Run mutation testing on changed files only
+dart_mutant --incremental --base-ref origin/main --format json --quiet
+
+# Step 2: Parse JSON, find files with surviving mutants
+# Step 3: For each survivor, read the mutation diff and the covering test
+# Step 4: Write a new test case that would kill the survivor
+# Step 5: Re-run only that mutant to verify it's now killed
+dart_mutant --mutant <mutant-id> --format json --quiet
+```
+
+---
+
+## Usage
+
+### Quick start
+
+```bash
+cd my-dart-project
+dart_mutant
+```
+
+That's it. dart_mutant auto-detects:
+- `lib/` as the source directory
+- `dart test` as the test command (or `flutter test` if `flutter` is on `PATH` and a `pubspec.yaml` with Flutter SDK is present)
+- All mutation operators (generic + Dart-specific)
+- CPU count for parallel workers
+- `.dart_mutant.yml` if present in the project root
+
+### First run
+
+```bash
+$ cd my-flutter-app
+$ dart_mutant
+
+dart_mutant v0.1.0 — Mutation Testing for Dart
+
+Parsing lib/............................ 142 files
+Discovering mutation points............ 1,247 mutants found
+Collecting coverage.................... dart test --coverage
+Building per-test coverage map......... 312 tests mapped
+Injecting schemata (compile once)..... done in 3.2s
+Running mutants (8 parallel)......... ████████████████░░░░ 847/1247
+
+Results:
+  Killed:       689  (55.3%)
+  Survived:     158  (12.7%)
+  Timeout:      12   (1.0%)
+  Equivalent:   43   (excluded)
+  Not covered:  298  (excluded)
+  Compile error: 7   (0.6%)
+
+  Mutation Score (MSI): 80.2%
+  Mutation Coverage:   71.5%
+  Threshold: 80%       ✅ PASSED
+
+Reports:
+  → mutation-reports/mutation-report.html
+  → mutation-reports/mutation-report.json
+  → mutation-reports/mutation-results.xml
+```
+
+### Common commands
+
+```bash
+# Full run with all reports
+dart_mutant --format html,json,junit
+
+# Set a CI threshold (exit 1 if below)
+dart_mutant --threshold 80
+
+# Only test mutants on lines changed vs main branch
+dart_mutant --incremental --base-ref main
+
+# Run a specific mutant by ID (for iterative fixing)
+dart_mutant --mutant 42
+
+# Restrict to specific operators
+dart_mutant --operators AOR,ROR,NullSafety,Cascade
+
+# Limit mutations for quick feedback
+dart_mutant --sample 50
+
+# Enable equivalent-mutant detection (slower, more accurate score)
+dart_mutant --detect-equivalent
+
+# Use Flutter test instead of dart test
+dart_mutant --test-command "flutter test"
+
+# Exclude specific files/globs
+dart_mutant --exclude "lib/generated/**,lib/l10n/**"
+
+# Adjust parallelism
+dart_mutant --parallel 4
+
+# Quiet mode (CI-friendly, minimal output)
+dart_mutant --quiet --format json
+
+# Custom timeout coefficient (default 3.0)
+dart_mutant --timeout-coefficient 5.0
+```
+
+### Configuration file
+
+Create `.dart_mutant.yml` in your project root:
+
+```yaml
+# .dart_mutant.yml
+test_command: "flutter test"
+source_path: "lib/"
+exclude:
+  - "*.g.dart"
+  - "*.freezed.dart"
+  - "*.mocks.dart"
+  - "lib/generated/**"
+  - "lib/l10n/**"
+threshold: 80
+parallel: 8
+timeout_coefficient: 3.0
+detect_equivalent: false
+incremental: false
+base_ref: "main"
+format:
+  - console
+  - html
+  - json
+  - junit
+operators:
+  - AOR
+  - ROR
+  - LOR
+  - LCR
+  - COR
+  - SDL
+  - RVR
+  - INC
+  - NullSafety
+  - NullAssert
+  - OptionalChaining
+  - Cascade
+  - AsyncAwait
+  - SealedExhaustiveness
+  - StreamMutation
+```
+
+CLI flags always override `.dart_mutant.yml`, which always overrides defaults.
+
+### Reading the report
+
+#### HTML report
+
+Open `mutation-reports/mutation-report.html` in any browser. It's self-contained — no external CSS, JS, or internet required. Shows:
+- Per-file mutation score heatmap (green = high kill rate, red = low)
+- Per-mutant detail: original code, mutated code, diff, status, covering tests
+- Filterable by status (killed / survived / timeout / equivalent / not covered)
+
+#### JSON report (Stryker-compatible)
+
+Validates against the [mutation-testing-elements](https://github.com/stryker-mutator/mutation-testing-elements) JSON schema. Compatible with the Stryker dashboard at `https://dashboard.stryker-mutator.io`.
+
+#### JUnit XML
+
+Standard JUnit format for CI test result panels. Each mutant appears as a test case with pass/fail status. Shows up natively in GitHub Actions, GitLab CI, Azure Pipelines, and Jenkins.
+
+### Interpreting results
+
+| Status | What it means | What to do |
+|---|---|---|
+| **KILLED** | Your tests caught the mutation. | Nothing — this is good. |
+| **SURVIVED** | Your tests didn't catch the mutation. | Read the diff, understand what changed, write a test that would fail if that mutation were applied. |
+| **TIMEOUT** | The mutation caused an infinite loop or hang. | The mutation likely broke a loop condition. Add a test with boundary inputs. |
+| **EQUIVALENT** | The mutation produces identical bytecode. | Nothing — this mutant is unkillable. It's excluded from your score. |
+| **NOT_COVERED** | No test exercises the mutated line. | Add a test that reaches this code path. |
+| **COMPILE_ERROR** | The mutation produced invalid Dart. | If this is >2% of total, file a bug — the tree-sitter grammar may need updating. |
+
+### Iterative workflow (the recommended loop)
+
+```bash
+# 1. Run mutation testing on changed files
+dart_mutant --incremental --base-ref main --format html
+
+# 2. Open the HTML report, filter by "survived"
+open mutation-reports/mutation-report.html
+
+# 3. For each survivor:
+#    - Read the mutation diff (what changed)
+#    - Read the covering test (why it didn't catch it)
+#    - Write a new test case that asserts the mutated behavior
+
+# 4. Re-run only that mutant to verify you killed it
+dart_mutant --mutant <mutant-id>
+
+# 5. Re-run the full incremental to confirm your score improved
+dart_mutant --incremental --base-ref main
+```
+
+---
+
 ## Core principles — the CRITICAL RULES
 
 ### 1. CRITICAL: AST-only mutations — never regex
