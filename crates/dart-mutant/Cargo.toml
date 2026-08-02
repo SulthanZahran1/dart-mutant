@@ -1,0 +1,26 @@
+[package]
+name = "dart-mutant"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+description = "CLI for dart_mutant — AST-based mutation testing for Dart"
+
+[[bin]]
+name = "dart_mutant"
+path = "src/main.rs"
+
+[dependencies]
+dart-mutant-core.workspace = true
+dart-mutant-runner.workspace = true
+dart-mutant-report.workspace = true
+dart-mutant-tce.workspace = true
+clap.workspace = true
+serde = { version = "1.0", features = ["derive"] }
+serde_json.workspace = true
+serde_yaml.workspace = true
+anyhow.workspace = true
+log.workspace = true
+env_logger.workspace = true
+walkdir.workspace = true
