@@ -54,6 +54,15 @@ jobs:
       # Unit tests + integration suite (harness, correctness, routing, reports,
       # contract, tce, scale is separate). On Windows the Dart SDK from
       # setup-dart runs the fixture test suites natively.
+      - name: Resolve fixture dependencies (dart pub get)
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in tests/fixtures/small tests/fixtures/medium tests/fixtures/large; do
+            echo "== $f =="
+            (cd "$f" && dart pub get)
+          done
+
       - name: Test (unit + integration)
         run: cargo test --workspace
 
@@ -143,6 +152,9 @@ jobs:
 
       - name: Build (release)
         run: cargo build --release
+
+      - name: Resolve large fixture dependencies (dart pub get)
+        run: cd tests/fixtures/large && dart pub get
 
       - name: Scale gate — cold < 600s, warm < 30s
         run: cargo test -p dart-mutant --test scale -- --ignored
