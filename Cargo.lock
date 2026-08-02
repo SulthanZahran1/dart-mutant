@@ -186,7 +186,7 @@ dependencies = [
 
 [[package]]
 name = "dart-mutant"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -204,7 +204,7 @@ dependencies = [
 
 [[package]]
 name = "dart-mutant-core"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "glob",
@@ -218,7 +218,7 @@ dependencies = [
 
 [[package]]
 name = "dart-mutant-report"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "dart-mutant-core",
@@ -229,7 +229,7 @@ dependencies = [
 
 [[package]]
 name = "dart-mutant-runner"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "dart-mutant-core",
@@ -245,7 +245,7 @@ dependencies = [
 
 [[package]]
 name = "dart-mutant-tce"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "anyhow",
  "dart-mutant-core",
