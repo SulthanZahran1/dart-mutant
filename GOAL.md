@@ -17,7 +17,7 @@ Each milestone file is independent and self-contained. A milestone moves through
 | File | Version | Focus | State | Human check |
 |---|---|---|---|---|
 | [GOAL-0.1.md](GOAL-0.1.md) | 0.1.0 | Original v0.1.0 — shipped, validated 2026-08-02 (143 mutants, 119 killed, MSI 83%, 0 compile errors, 4 binaries, 3 install paths) | ✅ signed-off | 2026-08-02 (validated against real fixture) |
-| [GOAL-1.0.md](GOAL-1.0.md) | 1.0.0 | **The harness**: integration test suite, fixtures (small/medium/large + Flutter), CI matrix (Linux + Windows, real SDKs), scale gate, `schemaVersion`, crates.io publishing | 📝 draft | Signed-off live demo (per protocol) |
+| [GOAL-1.0.md](GOAL-1.0.md) | 1.0.0 | **The harness**: integration test suite, fixtures (small/medium/large + Flutter), CI matrix (Linux + Windows, real SDKs), scale gate, `schemaVersion`, crates.io publishing | ✅ signed-off | 2026-08-03 (in-session sign-off; all 4 CI jobs green, crates.io published from `v1.0.0`) |
 | [GOAL-2.0.md](GOAL-2.0.md) | 1.1.0 | Flutter per-test routing, incremental polish, ecosystem integrations | 📝 draft | Signed-off live demo (per protocol) |
 | [GOAL-3.0.md](GOAL-3.0.md) | 1.2.0 | Hybrid routing, advanced TCE, plugin surface | 📝 draft | Signed-off live demo (per protocol) |
 

@@ -1,7 +1,7 @@
 # GOAL 1.0.0 — dart_mutant: the verified harness
 
-> **Status:** draft (proposed 2026-08-02). Locking is a human act — see Human check.
-> **Scope decided in wayfinder ticket #2:** harness hard requirement · Flutter IN · Windows IN · scale gate IN · crates.io IN · CLI/JSON contract frozen.
+> **Status:** signed-off (2026-08-03, in-session by Sulthan). Locked scope per wayfinder ticket #2: harness hard requirement · Flutter IN · Windows IN · scale gate IN · crates.io IN · CLI/JSON contract frozen.
+> **Sign-off evidence:** all 4 CI jobs green on `f30b25f` (ubuntu + windows test, flutter, scale-gate); crates.io publish completed from the `v1.0.0` tag; live demo MP4 recorded.
 
 Build the integration test harness and release machinery that make dart_mutant's guarantees machine-checked, so that 1.0.0 is a version whose claims are proven in CI on every commit: an integration test crate with small/medium/large + Flutter fixtures, a CI matrix on Linux and Windows against real Dart and Flutter SDKs, a performance scale gate, a frozen CLI/JSON contract with `schemaVersion`, and publishing to crates.io on tag.
 
@@ -101,5 +101,7 @@ The agent runs, live, in front of the human:
 6. A real-project run chosen by the human (any Dart/Flutter project) — the human judges fit.
 
 **Sign-off:** the human signs off in-session; the agent records it here and flips status to `signed-off`.
+
+> **Signed off 2026-08-03 by Sulthan (in-session).** Demo evidence: [demo MP4](./docs/demo/dart-mutant-1.0.0-demo.mp4); CI run [30761276823](https://github.com/SulthanZahran1/dart-mutant/actions/runs/30761276823) green on all four jobs; crates.io publish from `v1.0.0` tag.
 
 **Failure:** small failures → rework (criteria do not bend). Big failures (premise doesn't hold — e.g. Flutter path unusable in practice, performance envelope infeasible) → renegotiate criteria, then re-demo.
