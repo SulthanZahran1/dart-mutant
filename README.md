@@ -18,12 +18,12 @@ curl -fsSL https://raw.githubusercontent.com/SulthanZahran1/dart-mutant/main/scr
 brew install SulthanZahran1/tap/dart_mutant
 ```
 
-### Cargo (from crates.io)
+### Cargo (from source)
 
-**`dart_mutant` 1.0.0 is published on [crates.io](https://crates.io/crates/dart-mutant).**
+`dart_mutant` is not published on crates.io yet; install it from this repository:
 
 ```bash
-cargo install dart-mutant
+cargo install --git https://github.com/SulthanZahran1/dart-mutant --tag v1.0.0
 ```
 
 ### Pre-built binaries
